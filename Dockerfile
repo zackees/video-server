@@ -15,7 +15,7 @@ RUN npm install -g http-server
 #RUN npm i -g webtorrent-hybrid && \
 #	mkdir -p /webtorrent
 
-EXPOSE 80
+EXPOSE 8080
 WORKDIR /webtorrent
 
 # COPY . .
@@ -23,7 +23,7 @@ WORKDIR /webtorrent
 # ENTRYPOINT ["/usr/local/bin/webtorrent-hybrid"]
 # CMD ["/bin/sh", "-c", "bash", "-it"]
 
-CMD ["http-server", "-p", "80"]
+CMD ["http-server", "-p", "8080"]
 
 # docker buildx build --platform linux/amd64 --push -t wtapp .
 # docker run -it wtapp
