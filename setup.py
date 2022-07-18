@@ -11,12 +11,12 @@ from setuptools import Command, find_packages, setup
 # The directory containing this file
 HERE = os.path.dirname(__file__)
 
-NAME = "ytclip-server"
-DESCRIPTION = "Server to run ytclip."
-URL = "https://github.com/zackees/ytclip-server"
+NAME = "webtorrent-movie-server"
+DESCRIPTION = "Server to run a webtorrent movie"
+URL = "https://github.com/zackees/webtorrent-movie-server"
 EMAIL = "dont@email.me"
 AUTHOR = "Zach Vorhies"
-REQUIRES_PYTHON = ">=3.6.0"
+REQUIRES_PYTHON = ">=3.10.4"
 VERSION = None
 
 # The text of the README file
@@ -27,7 +27,7 @@ with open(os.path.join(HERE, "requirements.txt"), encoding="utf-8", mode="rt") a
     REQUIREMENTS = [line.strip() for line in fd.readlines() if line.strip()]
 
 with open(
-    os.path.join(HERE, "ytclip_server", "version.py"), encoding="utf-8", mode="rt"
+    os.path.join(HERE, "webtorrent_movie_server", "version.py"), encoding="utf-8", mode="rt"
 ) as fd:
     for line in fd.readlines():
         if line.startswith("VERSION"):
@@ -96,7 +96,7 @@ setup(
     install_requires=REQUIREMENTS,
     entry_points={
         "console_scripts": [
-            "ytclip_server = ytclip_server.cmd:main",
+            "webtorrent_movie_server = webtorrent_movie_server.cmd:main",
         ],
     },
     packages=find_packages(exclude=["tests", "*.tests", "*.tests.*", "tests.*"]),

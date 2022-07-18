@@ -24,7 +24,7 @@ from fastapi.responses import (
 )
 from fastapi.staticfiles import StaticFiles
 
-from ytclip_server.version import VERSION
+from webtorrent_movie_server.version import VERSION
 
 executor = ThreadPoolExecutor(max_workers=8)
 

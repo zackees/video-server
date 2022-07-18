@@ -7,10 +7,10 @@ import requests
 import uvicorn
 from uvicorn.config import Config
 
-# from ytclip_server.app import app
-from ytclip_server.version import VERSION
+# from webtorrent_movie_server.app import app
+from webtorrent_movie_server.version import VERSION
 
-APP_NAME = "ytclip_server.app:app"
+APP_NAME = "webtorrent_movie_server.app:app"
 MY_IP = "127.0.0.1"
 PORT = 4422  # Arbitrarily chosen.
 

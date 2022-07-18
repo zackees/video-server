@@ -22,4 +22,4 @@ RUN python -m pip install --no-cache-dir -e .
 # Expose the port and then launch the app.
 EXPOSE 80
 
-CMD ["uvicorn", "--host", "0.0.0.0", "--port", "80", "ytclip_server.app:app"]
+CMD ["uvicorn", "--host", "0.0.0.0", "--port", "80", "webtorrent_movie_server.app:app"]
