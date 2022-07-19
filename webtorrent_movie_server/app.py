@@ -10,6 +10,7 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import (
     PlainTextResponse,
     RedirectResponse,
+    JSONResponse
 )
 from fastapi.staticfiles import StaticFiles
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
@@ -93,9 +94,21 @@ async def api_info() -> PlainTextResponse:
     msg += f"Current local time: {now_time}\n"
     msg += f"Process ID: { os.getpid()}\n"
     msg += f"Thread ID: { get_current_thread_id() }\n"
+    msg += f"Number of Views: {app_data.get('views', 0)}\n"
     msg += f"App state: {app_data}\n"
     return PlainTextResponse(content=msg)
 
+@app.get("/view")
+async def api_add_view(add_view: bool=True) -> JSONResponse:
+    """Adds a view to the app state."""
+    if add_view:
+        app_state.atomic_add("views", 1)
+    out = {
+        "views": app_state.get("views", 0),
+        "magnetURI": app_state.get("magnetURI", "None"),
+        "add_view": add_view
+    }
+    return JSONResponse(content=out)
 
 @app.post("/upload")
 async def upload(password: str, file: UploadFile = File(...)) -> PlainTextResponse:
