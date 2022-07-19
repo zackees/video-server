@@ -12,10 +12,18 @@ from fastapi.responses import (
     RedirectResponse,
 )
 from fastapi.staticfiles import StaticFiles
+from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 
 from webtorrent_movie_server.version import VERSION
 
+
 HERE = os.path.dirname(__file__)
+ROOT = os.path.dirname(HERE)
+DATA_DIR = os.environ.get("DATA_DIR", os.path.join(ROOT, "data"))
+os.makedirs(DATA_DIR, exist_ok=True)
+app_state = KeyValueSqlite(os.path.join(DATA_DIR, "app.sqlite"), "app")
+
+
 app = FastAPI()
 
 STARTUP_DATETIME = datetime.datetime.now()
@@ -76,6 +84,7 @@ async def api_version() -> PlainTextResponse:
 async def api_info() -> PlainTextResponse:
     """Returns the current time and the number of seconds since the server started."""
     now_time = datetime.datetime.now()
+    app_data = app_state.items()
     msg = "running\n"
     msg += "Example: localhost/clip\n"
     msg += "VERSION: " + VERSION + "\n"
@@ -84,6 +93,7 @@ async def api_info() -> PlainTextResponse:
     msg += f"Current local time: {now_time}\n"
     msg += f"Process ID: { os.getpid()}\n"
     msg += f"Thread ID: { get_current_thread_id() }\n"
+    msg += f"App state: {app_data}\n"
     return PlainTextResponse(content=msg)
 
 
@@ -91,14 +101,35 @@ async def api_info() -> PlainTextResponse:
 async def upload(password: str, file: UploadFile = File(...)) -> PlainTextResponse:
     """Uploads a file to the server."""
     if password != PASSWORD:
-        return PlainTextResponse(content="Invalid password")
+        return PlainTextResponse(status_code=401, content="Invalid password")
+    if not file.filename.endswith(".mp4"):
+        return PlainTextResponse(
+            status_code=410, content="Invalid file type, must be mp4"
+        )
+    tmp_dest_path = os.path.join(DATA_DIR, "tmp_" + os.urandom(16).hex() + ".mp4")
+    final_path = os.path.join(DATA_DIR, file.filename)
+    exc_string: str | None = None  # exception string, if it happens.
+    exc_status_code: int = 0  # http status code for exception, if it happens.
     try:
-        contents = await file.read()
-        with open(file.filename, mode="wb") as filed:
-            filed.write(contents)
+        # Generate a random name for the temp file.
+        with open(tmp_dest_path, mode="wb") as filed:
+            while (chunk := await file.read(1024 * 64)) != b"":
+                filed.write(chunk)
+        # After writing is finished, move the file to the final location.
+        os.rename(tmp_dest_path, final_path)
     except Exception as err:  # pylint: disable=broad-except
-        content = "There was an error uploading the file because: " + str(err)
-        return PlainTextResponse(status_code=500, content=content)
+        exc_string = "There was an error uploading the file because: " + str(err)
+        exc_status_code = 500
     finally:
         await file.close()
+        if os.path.exists(tmp_dest_path):
+            try:
+                os.remove(tmp_dest_path)
+            except OSError as os_err:
+                exc_status_code = 500
+                exc_string = (
+                    "There was an error deleting the temp file because: " + str(os_err)
+                )
+    if exc_string is not None:
+        return PlainTextResponse(status_code=exc_status_code, content=exc_string)
     return PlainTextResponse(content=f"Successfuly uploaded {file.filename}")
