@@ -70,6 +70,7 @@ async def favicon() -> RedirectResponse:
     """Returns favico file."""
     return RedirectResponse(url="/www/favicon.ico")
 
+
 @app.get("/info")
 async def api_info() -> JSONResponse:
     """Returns the current time and the number of seconds since the server started."""
