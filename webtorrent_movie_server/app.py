@@ -82,25 +82,30 @@ async def api_version() -> PlainTextResponse:
 
 
 @app.get("/info")
-async def api_info() -> PlainTextResponse:
+async def api_info() -> JSONResponse:
     """Returns the current time and the number of seconds since the server started."""
-    now_time = datetime.datetime.now()
-    app_data = app_state.items()
-    msg = "running\n"
-    msg += "Example: localhost/clip\n"
-    msg += "VERSION: " + VERSION + "\n"
-    msg += f"Launched at         {STARTUP_DATETIME}\n"
-    msg += f"Current utc time:   {datetime.datetime.utcnow()}\n"
-    msg += f"Current local time: {now_time}\n"
-    msg += f"Process ID: { os.getpid()}\n"
-    msg += f"Thread ID: { get_current_thread_id() }\n"
-    msg += f"Number of Views: {app_data.get('views', 0)}\n"
-    msg += f"App state: {app_data}\n"
-    return PlainTextResponse(content=msg)
+    app_data = app_state.to_dict()
+    out = {
+        "version": VERSION,
+        "Launched at": str(STARTUP_DATETIME),
+        "Current utc time": str(datetime.datetime.utcnow()),
+        "Process ID": os.getpid(),
+        "Thread ID": get_current_thread_id(),
+        "Number of Views": app_data.get("views", 0),
+        "App state": app_data
+    }
+    return JSONResponse(out)
 
-@app.get("/view")
+@app.get("/stats")
+async def api_views() -> JSONResponse:
+    """Returns the current number of views."""
+    app_data = app_state.to_dict()
+    views = str(app_data.get('views', 0))
+    return JSONResponse({'views': views})
+
+@app.get("/accessMagnetURI")
 async def api_add_view(add_view: bool=True) -> JSONResponse:
-    """Adds a view to the app state."""
+    """Get the stored magnet URI and optionally increment the number of views."""
     if add_view:
         app_state.atomic_add("views", 1)
     out = {
