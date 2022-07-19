@@ -7,11 +7,7 @@ import os
 import threading
 
 from fastapi import FastAPI, UploadFile, File
-from fastapi.responses import (
-    PlainTextResponse,
-    RedirectResponse,
-    JSONResponse
-)
+from fastapi.responses import PlainTextResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 
@@ -92,28 +88,31 @@ async def api_info() -> JSONResponse:
         "Process ID": os.getpid(),
         "Thread ID": get_current_thread_id(),
         "Number of Views": app_data.get("views", 0),
-        "App state": app_data
+        "App state": app_data,
     }
     return JSONResponse(out)
+
 
 @app.get("/stats")
 async def api_views() -> JSONResponse:
     """Returns the current number of views."""
     app_data = app_state.to_dict()
-    views = str(app_data.get('views', 0))
-    return JSONResponse({'views': views})
+    views = str(app_data.get("views", 0))
+    return JSONResponse({"views": views})
+
 
 @app.get("/accessMagnetURI")
-async def api_add_view(add_view: bool=True) -> JSONResponse:
+async def api_add_view(add_view: bool = True) -> JSONResponse:
     """Get the stored magnet URI and optionally increment the number of views."""
     if add_view:
         app_state.atomic_add("views", 1)
     out = {
         "views": app_state.get("views", 0),
         "magnetURI": app_state.get("magnetURI", "None"),
-        "add_view": add_view
+        "add_view": add_view,
     }
     return JSONResponse(content=out)
+
 
 @app.post("/upload")
 async def upload(password: str, file: UploadFile = File(...)) -> PlainTextResponse:
