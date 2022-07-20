@@ -5,6 +5,15 @@ FROM python:3.10-slim-bullseye
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
 
+RUN apt-get update && apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg-agent \
+    software-properties-common
+
+RUN apt-get install -y npm nodejs
+
 WORKDIR /app
 
 # Install all the dependencies as it's own layer.
