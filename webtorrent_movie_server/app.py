@@ -16,7 +16,7 @@ from webtorrent_movie_server.version import VERSION
 
 DEFAULT_TRACKER_URL = "wss://webtorrent-tracker.onrender.com"
 TRACKER_URL = os.environ.get("CNAME", DEFAULT_TRACKER_URL)
-PORT = 80
+CLIENT_SEED_PORT = 8000
 
 HERE = os.path.dirname(__file__)
 ROOT = os.path.dirname(HERE)
@@ -82,7 +82,7 @@ def seed_movie(file_path: str) -> str:
     print(f"New movie added: {file_path}")
     cwd = os.path.dirname(file_path)
     file_name = os.path.basename(file_path)
-    cmd = f'webtorrent-hybrid seed --keep-seeding "{file_name}" --announce {TRACKER_URL} --port {PORT}'
+    cmd = f'webtorrent-hybrid seed --keep-seeding "{file_name}" --announce {TRACKER_URL} --port {CLIENT_SEED_PORT}'
     print(f"Running: {cmd}")
     process = subprocess.Popen(
         cmd, shell=True, cwd=cwd, stdout=subprocess.PIPE, universal_newlines=True
