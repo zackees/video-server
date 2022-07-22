@@ -1,5 +1,5 @@
 # FROM ubuntu:22.04
-FROM python:3.10-slim-bullseye
+FROM --platform=linux/amd64 python:3.10-slim-bullseye
 
 # Might be necessary.
 ENV LC_ALL=C.UTF-8
