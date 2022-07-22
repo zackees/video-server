@@ -2,3 +2,4 @@ fastapi
 uvicorn[standard]
 python-multipart
 keyvalue-sqlite==1.0.4
+multipart
