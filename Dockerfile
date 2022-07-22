@@ -29,4 +29,5 @@ RUN ./install.sh
 # Expose the port and then launch the app.
 EXPOSE 80
 
-CMD ["uvicorn", "--host", "0.0.0.0", "--port", "80", "webtorrent_movie_server.app:app"]
+# Note reload allows restart by file touch.
+CMD ["uvicorn", "--host", "0.0.0.0", "--reload", "--port", "80", "webtorrent_movie_server.app:app"]

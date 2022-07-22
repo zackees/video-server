@@ -175,3 +175,18 @@ async def upload(file: UploadFile = File(...)) -> PlainTextResponse:
     if exc_string is not None:
         return PlainTextResponse(status_code=exc_status_code, content=exc_string)
     return PlainTextResponse(content=magnet_uri)
+
+
+def touch(fname):
+    """Touches file"""
+    open(fname, encoding="utf-8", mode="a").close()
+    os.utime(fname, None)
+
+
+@app.get("/clear")
+async def clear() -> PlainTextResponse:
+    """Clears the stored magnet URI."""
+    app_state.clear()
+    # use os.touch to trigger a restart on this server.
+    touch(__file__)
+    return PlainTextResponse(content="Server queued for restart.")
