@@ -15,7 +15,7 @@ from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 from webtorrent_movie_server.version import VERSION
 
 DEFAULT_TRACKER_URL = "wss://webtorrent-tracker.onrender.com"
-TRACKER_URL = os.environ.get("CNAME", DEFAULT_TRACKER_URL)
+TRACKER_URL = os.environ.get("TRACKER_URL", DEFAULT_TRACKER_URL)
 CLIENT_SEED_PORT = 8000
 
 HERE = os.path.dirname(__file__)
@@ -30,7 +30,9 @@ RUNNING_MOVIE_PROCESS: subprocess.Popen | None = None
 
 STARTUP_DATETIME = datetime.datetime.now()
 
-PASSWORD = os.environ.get("WEBTORRENT_MOVIE_SERVER_PASSWORD")  # TODO: implement this
+PASSWORD = os.environ.get(
+    "WEBTORRENT_MOVIE_SERVER_PASSWORD"
+)  # TODO: implement this  # pylint: disable=fixme
 
 
 def log_error(msg: str) -> None:
@@ -82,26 +84,30 @@ def seed_movie(file_path: str) -> str:
     print(f"New movie added: {file_path}")
     cwd = os.path.dirname(file_path)
     file_name = os.path.basename(file_path)
-    cmd = f'webtorrent-hybrid seed --keep-seeding "{file_name}" --announce {TRACKER_URL} --port {CLIENT_SEED_PORT}'
+    cmd = (
+        f'webtorrent-hybrid seed --keep-seeding "{file_name}"'
+        f" --announce {TRACKER_URL} --port {CLIENT_SEED_PORT}"
+    )
     print(f"Running: {cmd}")
-    process = subprocess.Popen(
+    process = subprocess.Popen(  # pylint: disable=consider-using-with
         cmd, shell=True, cwd=cwd, stdout=subprocess.PIPE, universal_newlines=True
     )
     magnet_uri = None
-    for line in iter(process.stdout.readline, ""):
+    for line in iter(process.stdout.readline, ""):  # type: ignore
         print(line, end="")
         if line.startswith("magnetURI: "):
-            magnet_uri = line.split(" ")[1]
+            magnet_uri = line.split(" ")[1].strip()
             print(f"Found magnetURI: {magnet_uri}")
-            app_state.set("magnetURI", magnet_uri.strip())
+            app_state.set("magnetURI", magnet_uri)
             break
 
-    # create a stdout pump
-    def pump_stdout(process: subprocess.Popen) -> None:
-        for _ in iter(process.stdout.readline, ""):
+    # Make sure that the stdout buffer is drained, or else the process
+    # may freeze.
+    def drain_stdout(process: subprocess.Popen) -> None:
+        for _ in iter(process.stdout.readline, ""):  # type: ignore
             continue
 
-    threading.Thread(target=pump_stdout, args=(process,))  # todo capture.
+    threading.Thread(target=drain_stdout, args=(process,)).start()
     assert magnet_uri is not None, "Could not find magnet URI"
     # Do something
     return magnet_uri
@@ -185,7 +191,7 @@ async def api_views() -> JSONResponse:
 
 def touch(fname):
     """Touches file"""
-    open(fname, encoding="utf-8", mode="a").close()
+    open(fname, encoding="utf-8", mode="a").close()  # pylint: disable=consider-using-with
     os.utime(fname, None)
 
 
