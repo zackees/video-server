@@ -76,43 +76,6 @@ async def favicon() -> RedirectResponse:
     return RedirectResponse(url="/www/favicon.ico")
 
 
-@app.get("/info")
-async def api_info() -> JSONResponse:
-    """Returns the current time and the number of seconds since the server started."""
-    app_data = app_state.to_dict()
-    out = {
-        "version": VERSION,
-        "Launched at": str(STARTUP_DATETIME),
-        "Current utc time": str(datetime.datetime.utcnow()),
-        "Process ID": os.getpid(),
-        "Thread ID": get_current_thread_id(),
-        "Number of Views": app_data.get("views", 0),
-        "App state": app_data,
-    }
-    return JSONResponse(out)
-
-
-@app.get("/stats")
-async def api_views() -> JSONResponse:
-    """Returns the current number of views."""
-    app_data = app_state.to_dict()
-    views = str(app_data.get("views", 0))
-    return JSONResponse({"views": views})
-
-
-@app.get("/accessMagnetURI")
-async def api_add_view(add_view: bool = True) -> JSONResponse:
-    """Get the stored magnet URI and optionally increment the number of views."""
-    if add_view:
-        app_state.atomic_add("views", 1)
-    out = {
-        "views": app_state.get("views", 0),
-        "magnetURI": app_state.get("magnetURI", "None"),
-        "add_view": add_view,
-    }
-    return JSONResponse(content=out)
-
-
 def seed_movie(file_path: str) -> str:
     """Callback for when a new movie is added."""
 
@@ -130,9 +93,15 @@ def seed_movie(file_path: str) -> str:
         if line.startswith("magnetURI: "):
             magnet_uri = line.split(" ")[1]
             print(f"Found magnetURI: {magnet_uri}")
-            app_state.set("magnetURI", magnet_uri)
+            app_state.set("magnetURI", magnet_uri.strip())
             break
 
+    # create a stdout pump
+    def pump_stdout(process: subprocess.Popen) -> None:
+        for _ in iter(process.stdout.readline, ""):
+            continue
+
+    threading.Thread(target=pump_stdout, args=(process,))  # todo capture.
     assert magnet_uri is not None, "Could not find magnet URI"
     # Do something
     return magnet_uri
@@ -175,6 +144,43 @@ async def upload(file: UploadFile = File(...)) -> PlainTextResponse:
     if exc_string is not None:
         return PlainTextResponse(status_code=exc_status_code, content=exc_string)
     return PlainTextResponse(content=magnet_uri)
+
+
+@app.get("/accessMagnetURI")
+async def api_add_view(add_view: bool = True) -> JSONResponse:
+    """Get the stored magnet URI and optionally increment the number of views."""
+    if add_view:
+        app_state.atomic_add("views", 1)
+    out = {
+        "views": app_state.get("views", 0),
+        "magnetURI": app_state.get("magnetURI", "None"),
+        "add_view": add_view,
+    }
+    return JSONResponse(content=out)
+
+
+@app.get("/info")
+async def api_info() -> JSONResponse:
+    """Returns the current time and the number of seconds since the server started."""
+    app_data = app_state.to_dict()
+    out = {
+        "version": VERSION,
+        "Launched at": str(STARTUP_DATETIME),
+        "Current utc time": str(datetime.datetime.utcnow()),
+        "Process ID": os.getpid(),
+        "Thread ID": get_current_thread_id(),
+        "Number of Views": app_data.get("views", 0),
+        "App state": app_data,
+    }
+    return JSONResponse(out)
+
+
+@app.get("/stats")
+async def api_views() -> JSONResponse:
+    """Returns the current number of views."""
+    app_data = app_state.to_dict()
+    views = str(app_data.get("views", 0))
+    return JSONResponse({"views": views})
 
 
 def touch(fname):
