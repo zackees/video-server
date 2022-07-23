@@ -179,11 +179,12 @@ async def upload(file: UploadFile = File(...)) -> PlainTextResponse:
 @app.get("/accessMagnetURI")
 async def api_add_view(add_view: bool = True) -> JSONResponse:
     """Get the stored magnet URI and optionally increment the number of views."""
-    if add_view:
+    magnet_uri = app_state.get("magnetURI")
+    if magnet_uri is not None and add_view:
         app_state.atomic_add("views", 1)
     out = {
         "views": app_state.get("views", 0),
-        "magnetURI": app_state.get("magnetURI", "None"),
+        "magnetURI": magnet_uri or "None",
         "add_view": add_view,
     }
     return JSONResponse(content=out)
