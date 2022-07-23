@@ -104,8 +104,8 @@ def seed_movie(file_path: str) -> str:
     # Make sure that the stdout buffer is drained, or else the process
     # may freeze.
     def drain_stdout(process: subprocess.Popen) -> None:
-        for _ in iter(process.stdout.readline, ""):  # type: ignore
-            continue
+        for line in iter(process.stdout.readline, ""):  # type: ignore
+            print(line, end="")
 
     threading.Thread(target=drain_stdout, args=(process,)).start()
     assert magnet_uri is not None, "Could not find magnet URI"
