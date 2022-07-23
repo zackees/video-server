@@ -221,7 +221,7 @@ async def clear() -> PlainTextResponse:
     """Clears the stored magnet URI."""
     app_state.clear()
     # use os.touch to trigger a restart on this server.
-    touch(os.path.join(ROOT, "restart.file"))
+    touch(os.path.join(ROOT, "restart", "restart.file"))
     return PlainTextResponse(content="Server queued for restart.")
 
 
