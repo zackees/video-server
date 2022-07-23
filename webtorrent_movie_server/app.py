@@ -137,8 +137,6 @@ def seed_movie(file_path: str) -> str:
 @app.post("/upload")
 async def upload(file: UploadFile = File(...)) -> PlainTextResponse:
     """Uploads a file to the server."""
-    if True:
-        return "OK"
     if not file.filename.endswith(".mp4"):
         return PlainTextResponse(status_code=415, content="Invalid file type, must be mp4")
     print(f"Uploading file: {file.filename}")
