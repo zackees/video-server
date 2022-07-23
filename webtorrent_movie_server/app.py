@@ -102,7 +102,7 @@ async def favicon() -> RedirectResponse:
 def seed_movie(file_path: str) -> str:
     """Callback for when a new movie is added."""
 
-    print(f"New movie added: {file_path}")
+    print(f"Seeding new movie: {file_path}")
     cwd = os.path.dirname(file_path)
     file_name = os.path.basename(file_path)
     cmd = (
@@ -138,7 +138,8 @@ def seed_movie(file_path: str) -> str:
 async def upload(file: UploadFile = File(...)) -> PlainTextResponse:
     """Uploads a file to the server."""
     if not file.filename.endswith(".mp4"):
-        return PlainTextResponse(status_code=410, content="Invalid file type, must be mp4")
+        return PlainTextResponse(status_code=415, content="Invalid file type, must be mp4")
+    print(f"Uploading file: {file.filename}")
     tmp_dest_path = os.path.join(DATA_DIR, "tmp_" + os.urandom(16).hex() + ".mp4")
     final_path = os.path.join(DATA_DIR, file.filename)
     exc_string: str | None = None  # exception string, if it happens.
@@ -146,6 +147,7 @@ async def upload(file: UploadFile = File(...)) -> PlainTextResponse:
     magnet_uri = None
     try:
         # Generate a random name for the temp file.
+        print(f"Writing temp file to: {tmp_dest_path}")
         with open(tmp_dest_path, mode="wb") as filed:
             while (chunk := await file.read(1024 * 64)) != b"":
                 filed.write(chunk)
@@ -170,6 +172,7 @@ async def upload(file: UploadFile = File(...)) -> PlainTextResponse:
                 exc_string = "There was an error deleting the temp file because: " + str(os_err)
     if exc_string is not None:
         return PlainTextResponse(status_code=exc_status_code, content=exc_string)
+    print("file seeded.")
     return PlainTextResponse(content=magnet_uri)
 
 
