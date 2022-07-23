@@ -37,6 +37,10 @@ PASSWORD = os.environ.get(
 )  # TODO: implement this  # pylint: disable=fixme
 
 
+LOGFILE = os.path.join(DATA_DIR, "log.txt")
+LOG = open(LOGFILE, encoding="utf-8", mode="a")
+
+
 def log_error(msg: str) -> None:
     """Logs an error to the print stream."""
     print(msg)
@@ -48,6 +52,21 @@ def get_current_thread_id() -> int:
     if ident is None:
         return -1
     return int(ident)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Event handler for when the app starts up."""
+    print("Startup event")
+    LOG.write(f"Startup event\n")
+
+
+@app.on_event("shutdown")
+def shutdown_event():
+    """Event handler for when the app shuts down."""
+    print("Application shutdown")
+    LOG.write(f"Application shutdown\n")
+    LOG.close()
 
 
 # Mount all the static files.
