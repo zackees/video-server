@@ -70,3 +70,4 @@ EXPOSE 30000-65535/tcp
 #CMD ["uvicorn", "--host", "0.0.0.0", "--reload", "--reload-exclude", "*", "--reload-include", "reload.file", "--workers", "1", "--ws", "websockets", "--forwarded-allow-ips", "*", "--port", "80", "--debug", "true", "webtorrent_movie_server.app:app"]
 #CMD ["webtorrent-hybrid", "seed", "--keep-seeding", "make_venv.py", "--announce", "wss://webtorrent-tracker.onrender.com", "--port", "8000"]
 CMD ["/bin/bash", "run.sh"]
+CMD ["uvicorn", "--host", "0.0.0.0", "--reload", "--reload-dir", "restart", "--workers", "1", "--ws", "websockets", "--forwarded-allow-ips=*", "--port", "80", "webtorrent_movie_server.app:app"]

@@ -58,14 +58,14 @@ def get_current_thread_id() -> int:
 async def startup_event():
     """Event handler for when the app starts up."""
     print("Startup event")
-    LOG.write(f"Startup event\n")
+    LOG.write("Startup event\n")
 
 
 @app.on_event("shutdown")
 def shutdown_event():
     """Event handler for when the app shuts down."""
     print("Application shutdown")
-    LOG.write(f"Application shutdown\n")
+    LOG.write("Application shutdown\n")
     LOG.close()
 
 
