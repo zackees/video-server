@@ -14,6 +14,8 @@ from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 
 from webtorrent_movie_server.version import VERSION
 
+print("Starting fastapi webtorrent movie server")
+
 DEFAULT_TRACKER_URL = "wss://webtorrent-tracker.onrender.com"
 TRACKER_URL = os.environ.get("TRACKER_URL", DEFAULT_TRACKER_URL)
 CLIENT_SEED_PORT = 8000
@@ -202,3 +204,6 @@ async def clear() -> PlainTextResponse:
     # use os.touch to trigger a restart on this server.
     touch(__file__)
     return PlainTextResponse(content="Server queued for restart.")
+
+
+print("Starting fastapi webtorrent movie server loaded.")
