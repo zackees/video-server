@@ -62,7 +62,8 @@ RUN ./install.sh
 EXPOSE 80
 EXPOSE 8000
 # Websocket ports.
-EXPOSE 30000-65535
+EXPOSE 30000-65535/udp
+EXPOSE 30000-65535/tcp
 
 # Note reload allows restart by file touch.
-CMD ["uvicorn", "--host", "0.0.0.0", "--reload", "--port", "80", "webtorrent_movie_server.app:app"]
+CMD ["uvicorn", "--host", "0.0.0.0", "--reload", "--workers", "1", "--ws", "websockets", "--forwarded-allow-ips", "*", "--port", "80", "webtorrent_movie_server.app:app"]
