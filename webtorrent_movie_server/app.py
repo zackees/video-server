@@ -134,6 +134,7 @@ async def upload(  # pylint: disable=too-many-branches
             + str(err)
             + " magnetURI: "
             + str(magnet_uri)
+            or "None"
         )
         exc_status_code = 500
         if seed_process:
@@ -211,3 +212,15 @@ async def clear() -> PlainTextResponse:
 
 
 print("Starting fastapi webtorrent movie server loaded.")
+
+if __name__ == "__main__":
+    import webbrowser
+
+    import uvicorn
+
+    webbrowser.open("http://localhost:80")
+
+    # python -m webbrowser -t "http://localhost"
+
+    # Run the server in debug mode.
+    uvicorn.run(app, host="0.0.0.0", port=80)

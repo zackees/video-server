@@ -5,10 +5,11 @@
 import os
 import subprocess
 import threading
+import time
 from dataclasses import dataclass
 from typing import Optional
 
-DEFAULT_TRACKER_URL = "wss://webtorrent-tracker.onrender.com:80"
+DEFAULT_TRACKER_URL = "wss://webtorrent-tracker.onrender.com"
 TRACKER_URL = os.environ.get("TRACKER_URL", DEFAULT_TRACKER_URL)
 CLIENT_SEED_PORT = 80
 
@@ -36,7 +37,7 @@ def seed_movie(file_path: str) -> Optional[SeederProcess]:
     cwd = os.path.dirname(file_path)
     file_name = os.path.basename(file_path)
     cmd = (
-        f'npx webtorrent-hybrid seed --keep-seeding "{file_name}"'
+        f'webtorrent-hybrid seed --keep-seeding "{file_name}"'
         f" --announce {TRACKER_URL} --port {CLIENT_SEED_PORT}"
     )
     print(f"Running: {cmd}")
@@ -51,8 +52,12 @@ def seed_movie(file_path: str) -> Optional[SeederProcess]:
             print("Found magnetURI!")
             break
     else:
-        print("Could not find magnetURI!")
-        process.kill()
+        rtn_code = process.poll()
+        if rtn_code is not None and rtn_code != 0:
+            print(f"Process exited with non-zero exit code: {rtn_code}")
+        else:
+            print("Could not find magnetURI!")
+            process.kill()
         return None
 
     # Make sure that the stdout buffer is drained, or else the process

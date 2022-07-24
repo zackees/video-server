@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y --force-yes --no-install-recommends \
     libnss3-dev \
     libexpat-dev \
     npm \
-    nodejs 
+    nodejs
 #&& rm -rf /var/lib/apt/lists/*;
 
 
@@ -35,7 +35,8 @@ RUN apt-get install -y \
     libxss1 \
     libnss3 \
     xvfb \
-    git
+    git \
+    make gcc g++
 
 # Still work in progress.
 
