@@ -96,7 +96,9 @@ async def favicon() -> RedirectResponse:
 
 
 @app.post("/upload")
-async def upload(file: UploadFile = File(...)) -> PlainTextResponse:
+async def upload(  # pylint: disable=too-many-branches
+    file: UploadFile = File(...),
+) -> PlainTextResponse:
     """Uploads a file to the server."""
     if not file.filename.lower().endswith(".mp4"):
         return PlainTextResponse(status_code=415, content="Invalid file type, must be mp4")
@@ -106,6 +108,7 @@ async def upload(file: UploadFile = File(...)) -> PlainTextResponse:
     exc_string: str | None = None  # exception string, if it happens.
     exc_status_code: int = 0  # http status code for exception, if it happens.
     seed_process: Optional[SeederProcess] = None
+    magnet_uri: str = ""
     try:
         # Generate a random name for the temp file.
         print(f"Writing temp file to: {tmp_dest_path}")
@@ -120,9 +123,18 @@ async def upload(file: UploadFile = File(...)) -> PlainTextResponse:
                 raise OSError("A file already exists with this file name but is different.")
             os.remove(tmp_dest_path)
         seed_process = seed_movie(final_path)
-        app_state.set("magnetURI", seed_process.magnet_uri)
+        if seed_process is None:
+            raise OSError("Seeding failed.")
+        if seed_process:
+            magnet_uri = seed_process.magnet_uri
+        app_state.set("magnetURI", magnet_uri)
     except Exception as err:  # pylint: disable=broad-except
-        exc_string = "There was an error uploading the file because: " + str(err)
+        exc_string = (
+            "There was an error uploading the file because: "
+            + str(err)
+            + " magnetURI: "
+            + str(magnet_uri)
+        )
         exc_status_code = 500
         if seed_process:
             seed_process.terminate()
@@ -137,7 +149,11 @@ async def upload(file: UploadFile = File(...)) -> PlainTextResponse:
     if exc_string is not None:
         return PlainTextResponse(status_code=exc_status_code, content=exc_string)
     print("file seeded.")
-    assert seed_process is not None
+    if seed_process is None:
+        return PlainTextResponse(
+            status_code=500,
+            content="There was an error seeding the file and the seed_process was None.",
+        )
     return PlainTextResponse(content=seed_process.magnet_uri)
 
 
