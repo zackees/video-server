@@ -18,7 +18,7 @@ print("Starting fastapi webtorrent movie server")
 
 DEFAULT_TRACKER_URL = "wss://webtorrent-tracker.onrender.com"
 TRACKER_URL = os.environ.get("TRACKER_URL", DEFAULT_TRACKER_URL)
-CLIENT_SEED_PORT = 8000
+CLIENT_SEED_PORT = 80
 
 HERE = os.path.dirname(__file__)
 ROOT = os.path.dirname(HERE)
