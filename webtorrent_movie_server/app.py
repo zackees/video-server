@@ -110,7 +110,6 @@ def seed_movie(file_path: str) -> str:
         f" --announce {TRACKER_URL} --port {CLIENT_SEED_PORT}"
     )
     print(f"Running: {cmd}")
-    return "FAST OUT"
     process = subprocess.Popen(  # pylint: disable=consider-using-with
         cmd, shell=True, cwd=cwd, stdout=subprocess.PIPE, universal_newlines=True
     )
