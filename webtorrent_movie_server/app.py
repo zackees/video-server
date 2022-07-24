@@ -5,13 +5,14 @@
 import datetime
 import os
 import threading
+from typing import Optional
 
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 
-from webtorrent_movie_server.seed import seed_movie
+from webtorrent_movie_server.seed import SeederProcess, seed_movie
 from webtorrent_movie_server.version import VERSION
 
 print("Starting fastapi webtorrent movie server")
@@ -104,7 +105,7 @@ async def upload(file: UploadFile = File(...)) -> PlainTextResponse:
     final_path = os.path.join(DATA_DIR, file.filename)
     exc_string: str | None = None  # exception string, if it happens.
     exc_status_code: int = 0  # http status code for exception, if it happens.
-    magnet_uri = None
+    seed_process: Optional[SeederProcess] = None
     try:
         # Generate a random name for the temp file.
         print(f"Writing temp file to: {tmp_dest_path}")
@@ -118,11 +119,13 @@ async def upload(file: UploadFile = File(...)) -> PlainTextResponse:
             if os.path.getsize(final_path) != os.path.getsize(tmp_dest_path):
                 raise OSError("A file already exists with this file name but is different.")
             os.remove(tmp_dest_path)
-        magnet_uri = seed_movie(final_path)
-        app_state.set("magnetURI", magnet_uri)
+        seed_process = seed_movie(final_path)
+        app_state.set("magnetURI", seed_process.magnet_uri)
     except Exception as err:  # pylint: disable=broad-except
         exc_string = "There was an error uploading the file because: " + str(err)
         exc_status_code = 500
+        if seed_process:
+            seed_process.terminate()
     finally:
         await file.close()
         if os.path.exists(tmp_dest_path):
@@ -134,7 +137,8 @@ async def upload(file: UploadFile = File(...)) -> PlainTextResponse:
     if exc_string is not None:
         return PlainTextResponse(status_code=exc_status_code, content=exc_string)
     print("file seeded.")
-    return PlainTextResponse(content=magnet_uri)
+    assert seed_process is not None
+    return PlainTextResponse(content=seed_process.magnet_uri)
 
 
 @app.get("/accessMagnetURI")
