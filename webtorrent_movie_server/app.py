@@ -1,10 +1,9 @@
 """
-    Flask app for the ytclip command line tool. Serves an index.html at port 80. Clipping
-    api is located at /clip
+    Fastapi server
 """
+
 import datetime
 import os
-import subprocess
 import threading
 
 from fastapi import FastAPI, File, UploadFile
@@ -12,13 +11,11 @@ from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 
+from webtorrent_movie_server.seed import seed_movie
 from webtorrent_movie_server.version import VERSION
 
 print("Starting fastapi webtorrent movie server")
 
-DEFAULT_TRACKER_URL = "wss://webtorrent-tracker.onrender.com"
-TRACKER_URL = os.environ.get("TRACKER_URL", DEFAULT_TRACKER_URL)
-CLIENT_SEED_PORT = 80
 
 HERE = os.path.dirname(__file__)
 ROOT = os.path.dirname(HERE)
@@ -28,8 +25,6 @@ app_state = KeyValueSqlite(os.path.join(DATA_DIR, "app.sqlite"), "app")
 
 app = FastAPI()
 
-RUNNING_MOVIE_PROCESS: subprocess.Popen | None = None
-
 STARTUP_DATETIME = datetime.datetime.now()
 
 PASSWORD = os.environ.get(
@@ -38,7 +33,7 @@ PASSWORD = os.environ.get(
 
 
 LOGFILE = os.path.join(DATA_DIR, "log.txt")
-LOG = open(LOGFILE, encoding="utf-8", mode="a")
+LOG = open(LOGFILE, encoding="utf-8", mode="a")  # pylint: disable=consider-using-with
 
 
 def log_error(msg: str) -> None:
@@ -99,41 +94,6 @@ async def favicon() -> RedirectResponse:
     return RedirectResponse(url="/www/favicon.ico")
 
 
-def seed_movie(file_path: str) -> str:
-    """Callback for when a new movie is added."""
-
-    print(f"Seeding new movie: {file_path}")
-    cwd = os.path.dirname(file_path)
-    file_name = os.path.basename(file_path)
-    cmd = (
-        f'webtorrent-hybrid seed --keep-seeding "{file_name}"'
-        f" --announce {TRACKER_URL} --port {CLIENT_SEED_PORT}"
-    )
-    print(f"Running: {cmd}")
-    process = subprocess.Popen(  # pylint: disable=consider-using-with
-        cmd, shell=True, cwd=cwd, stdout=subprocess.PIPE, universal_newlines=True
-    )
-    magnet_uri = None
-    for line in iter(process.stdout.readline, ""):  # type: ignore
-        print(line, end="")
-        if line.startswith("magnetURI: "):
-            magnet_uri = line.split(" ")[1].strip()
-            print(f"Found magnetURI: {magnet_uri}")
-            app_state.set("magnetURI", magnet_uri)
-            break
-
-    # Make sure that the stdout buffer is drained, or else the process
-    # may freeze.
-    def drain_stdout(process: subprocess.Popen) -> None:
-        for line in iter(process.stdout.readline, ""):  # type: ignore
-            print(line, end="")
-
-    threading.Thread(target=drain_stdout, args=(process,)).start()
-    assert magnet_uri is not None, "Could not find magnet URI"
-    # Do something
-    return magnet_uri
-
-
 @app.post("/upload")
 async def upload(file: UploadFile = File(...)) -> PlainTextResponse:
     """Uploads a file to the server."""
@@ -159,6 +119,7 @@ async def upload(file: UploadFile = File(...)) -> PlainTextResponse:
                 raise OSError("A file already exists with this file name but is different.")
             os.remove(tmp_dest_path)
         magnet_uri = seed_movie(final_path)
+        app_state.set("magnetURI", magnet_uri)
     except Exception as err:  # pylint: disable=broad-except
         exc_string = "There was an error uploading the file because: " + str(err)
         exc_status_code = 500
