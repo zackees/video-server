@@ -10,3 +10,4 @@ tests
 *.mp4
 .vscode
 __pycache__
+package-lock.json
