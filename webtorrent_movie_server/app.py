@@ -109,7 +109,7 @@ async def upload(  # pylint: disable=too-many-branches
     final_path = os.path.join(DATA_DIR, file.filename)
     exc_string: str | None = None  # exception string, if it happens.
     exc_status_code: int = 0  # http status code for exception, if it happens.
-    seed_process: Optional[SeedProcess] = None
+    seed_process: SeedProcess
     magnet_uri: str = ""
     try:
         # Generate a random name for the temp file.
@@ -125,10 +125,7 @@ async def upload(  # pylint: disable=too-many-branches
                 raise OSError("A file already exists with this file name but is different.")
             os.remove(tmp_dest_path)
         seed_process = create_file_seeder(final_path, tracker_list=DEFAULT_TRACKER_LIST)
-        if seed_process is None:
-            raise OSError("Seeding failed.")
-        if seed_process:
-            magnet_uri = seed_process.wait_for_magnet_uri()
+        magnet_uri = seed_process.wait_for_magnet_uri()
         app_state.set("magnetURI", magnet_uri)
     except Exception as err:  # pylint: disable=broad-except
         exc_string = (
