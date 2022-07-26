@@ -11,9 +11,11 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
+from webtorrent_seeder.seed import SeedProcess, create_file_seeder  # type: ignore
 
-from webtorrent_movie_server.seed import SeederProcess, seed_movie
 from webtorrent_movie_server.version import VERSION
+
+DEFAULT_TRACKER_LIST = ["wss://webtorrent-tracker.onrender.com"]
 
 print("Starting fastapi webtorrent movie server")
 
@@ -107,7 +109,7 @@ async def upload(  # pylint: disable=too-many-branches
     final_path = os.path.join(DATA_DIR, file.filename)
     exc_string: str | None = None  # exception string, if it happens.
     exc_status_code: int = 0  # http status code for exception, if it happens.
-    seed_process: Optional[SeederProcess] = None
+    seed_process: Optional[SeedProcess] = None
     magnet_uri: str = ""
     try:
         # Generate a random name for the temp file.
@@ -122,11 +124,11 @@ async def upload(  # pylint: disable=too-many-branches
             if os.path.getsize(final_path) != os.path.getsize(tmp_dest_path):
                 raise OSError("A file already exists with this file name but is different.")
             os.remove(tmp_dest_path)
-        seed_process = seed_movie(final_path)
+        seed_process = create_file_seeder(final_path, tracker_list=DEFAULT_TRACKER_LIST)
         if seed_process is None:
             raise OSError("Seeding failed.")
         if seed_process:
-            magnet_uri = seed_process.magnet_uri
+            magnet_uri = seed_process.wait_for_magnet_uri()
         app_state.set("magnetURI", magnet_uri)
     except Exception as err:  # pylint: disable=broad-except
         exc_string = (
@@ -216,7 +218,7 @@ print("Starting fastapi webtorrent movie server loaded.")
 if __name__ == "__main__":
     import webbrowser
 
-    import uvicorn
+    import uvicorn  # type: ignore
 
     webbrowser.open("http://localhost:80")
 
