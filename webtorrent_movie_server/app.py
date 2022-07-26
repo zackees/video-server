@@ -5,7 +5,6 @@
 import datetime
 import os
 import threading
-from typing import Optional
 
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
