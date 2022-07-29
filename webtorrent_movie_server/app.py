@@ -10,7 +10,6 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
-from webtorrent_seeder.seed import SeedProcess, create_file_seeder  # type: ignore
 
 from webtorrent_movie_server.version import VERSION
 
@@ -18,6 +17,7 @@ DEFAULT_TRACKER_LIST = ["wss://webtorrent-tracker.onrender.com"]
 
 print("Starting fastapi webtorrent movie server")
 
+FILES_DIR = os.environ.get("FILES_DIR", "/var/data")
 
 HERE = os.path.dirname(__file__)
 ROOT = os.path.dirname(HERE)
@@ -67,7 +67,8 @@ def shutdown_event():
 
 
 # Mount all the static files.
-app.mount("/www", StaticFiles(directory=os.path.join(HERE, "www")), "www")
+app.mount("/www",StaticFiles(directory=os.path.join(HERE, "www")), "www")
+app.mount("/files",StaticFiles(directory=FILES_DIR), "files")
 
 
 # Redirect to index.html
@@ -104,56 +105,12 @@ async def upload(  # pylint: disable=too-many-branches
     if not file.filename.lower().endswith(".mp4"):
         return PlainTextResponse(status_code=415, content="Invalid file type, must be mp4")
     print(f"Uploading file: {file.filename}")
-    tmp_dest_path = os.path.join(DATA_DIR, "tmp_" + os.urandom(16).hex() + ".mp4")
     final_path = os.path.join(DATA_DIR, file.filename)
-    exc_string: str | None = None  # exception string, if it happens.
-    exc_status_code: int = 0  # http status code for exception, if it happens.
-    seed_process: SeedProcess
-    magnet_uri: str = ""
-    try:
-        # Generate a random name for the temp file.
-        print(f"Writing temp file to: {tmp_dest_path}")
-        with open(tmp_dest_path, mode="wb") as filed:
-            while (chunk := await file.read(1024 * 64)) != b"":
-                filed.write(chunk)
-        # After writing is finished, move the file to the final location.
-        if not os.path.exists(final_path):
-            os.rename(tmp_dest_path, final_path)
-        else:
-            if os.path.getsize(final_path) != os.path.getsize(tmp_dest_path):
-                raise OSError("A file already exists with this file name but is different.")
-            os.remove(tmp_dest_path)
-        seed_process = create_file_seeder(final_path, tracker_list=DEFAULT_TRACKER_LIST)
-        magnet_uri = seed_process.wait_for_magnet_uri()
-        app_state.set("magnetURI", magnet_uri)
-    except Exception as err:  # pylint: disable=broad-except
-        exc_string = (
-            "There was an error uploading the file because: "
-            + str(err)
-            + " magnetURI: "
-            + str(magnet_uri)
-            or "None"
-        )
-        exc_status_code = 500
-        if seed_process:
-            seed_process.terminate()
-    finally:
-        await file.close()
-        if os.path.exists(tmp_dest_path):
-            try:
-                os.remove(tmp_dest_path)
-            except OSError as os_err:
-                exc_status_code = 500
-                exc_string = "There was an error deleting the temp file because: " + str(os_err)
-    if exc_string is not None:
-        return PlainTextResponse(status_code=exc_status_code, content=exc_string)
-    print("file seeded.")
-    if seed_process is None:
-        return PlainTextResponse(
-            status_code=500,
-            content="There was an error seeding the file and the seed_process was None.",
-        )
-    return PlainTextResponse(content=seed_process.magnet_uri)
+    with open(final_path, mode="wb") as filed:
+        while (chunk := await file.read(1024 * 64)) != b"":
+            filed.write(chunk)
+    file.close()
+    return PlainTextResponse(content=f"wrote file okay at location: {final_path}")
 
 
 @app.get("/accessMagnetURI")

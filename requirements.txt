@@ -3,4 +3,3 @@ uvicorn[standard]
 python-multipart
 keyvalue-sqlite==1.0.4
 multipart
-webtorrent-seeder==1.1.0
