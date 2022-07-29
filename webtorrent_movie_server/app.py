@@ -106,6 +106,9 @@ async def upload(  # pylint: disable=too-many-branches
     """Uploads a file to the server."""
     if not file.filename.lower().endswith(".mp4"):
         return PlainTextResponse(status_code=415, content="Invalid file type, must be mp4")
+    if os.path.exists(FILES_DIR):
+        return PlainTextResponse(status_code=500, content="File upload not enabled because FILES_DIR is unset")
+
     print(f"Uploading file: {file.filename}")
     final_path = os.path.join(DATA_DIR, file.filename)
     with open(final_path, mode="wb") as filed:
