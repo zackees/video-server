@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y --force-yes --no-install-recommends \
 #&& rm -rf /var/lib/apt/lists/*;
 
 
-RUN apt-get install -y npm nodejs
+
 
 
 # From the webtorrent-hybrid dockerfile.
@@ -36,7 +36,9 @@ RUN apt-get install -y \
     libnss3 \
     xvfb \
     git \
-    make gcc g++
+    make gcc g++ nodejs npm
+
+RUN npm install node-pre-gyp webtorrent-cli webtorrent-hybrid -g
 
 # Still work in progress.
 
@@ -62,10 +64,7 @@ RUN ./install.sh
 
 # Expose the port and then launch the app.
 EXPOSE 80
-EXPOSE 8000
-# Websocket ports.
-EXPOSE 30000-65535/udp
-EXPOSE 30000-65535/tcp
+
 
 # Note reload allows restart by file touch.
 #CMD ["uvicorn", "--host", "0.0.0.0", "--reload", "--reload-exclude", "*", "--reload-include", "reload.file", "--workers", "1", "--ws", "websockets", "--forwarded-allow-ips", "*", "--port", "80", "--debug", "true", "webtorrent_movie_server.app:app"]

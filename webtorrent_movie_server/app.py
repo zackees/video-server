@@ -68,7 +68,9 @@ def shutdown_event():
 
 # Mount all the static files.
 app.mount("/www",StaticFiles(directory=os.path.join(HERE, "www")), "www")
-app.mount("/files",StaticFiles(directory=FILES_DIR), "files")
+
+if os.path.exists(FILES_DIR):
+    app.mount("/files",StaticFiles(directory='/var/data'), "www")
 
 
 # Redirect to index.html
