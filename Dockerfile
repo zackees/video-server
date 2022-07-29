@@ -60,7 +60,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # RUN python -m pip install --no-cache-dir -e .
-RUN ./install.sh
+# RUN ./install.sh
+
+RUN python -m pip install -e .
 
 # Expose the port and then launch the app.
 EXPOSE 80
