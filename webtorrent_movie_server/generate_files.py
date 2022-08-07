@@ -4,13 +4,10 @@ Service generates webtorrent files and
 import hashlib
 import os
 import shutil
-import sys
-import time
-from typing import List
+from typing import List, Tuple
 
 # WORK IN PROGRESS
 HERE = os.path.dirname(os.path.abspath(__file__))
-
 
 HTML_TEMPLATE = open(os.path.join(HERE, "template.html"), encoding="utf-8").read()
 WEBTORRENT_ZACH_MIN_JS = os.path.join(HERE, "webtorrent.zach.min.js")
@@ -40,7 +37,7 @@ def create_webtorrent_files(
     stun_servers: str,
     out_dir: str,
     chunk_factor: int = 17,
-) -> str:
+) -> Tuple[str, str]:
     assert tracker_announce_list
     md5file, torrent_path, html_path = get_files(file, out_dir=out_dir)
     # Generate the md5 file
@@ -50,7 +47,7 @@ def create_webtorrent_files(
         for f in [md5file, torrent_path, html_path]:
             if os.path.exists(f):
                 os.remove(f)
-        with open(md5file, "w") as f:
+        with open(md5file, encoding="utf-8", mode="w+") as f:
             f.write(md5)
     if not os.path.exists(torrent_path):
         # Use which to detect whether the mktorrent binary is available.
@@ -69,10 +66,10 @@ def create_webtorrent_files(
         html = HTML_TEMPLATE.replace("__TORRENT_URL__", torrent_id)
         html = html.replace("__WEBSEED__", webseed)
         html = html.replace("__STUN_SERVERS__", stun_servers)
-        with open(html_path, encoding="utf-8", mode="w") as f:
+        with open(html_path, encoding="utf-8", mode="w+") as f:
             f.write(html)
         assert os.path.exists(html_path), f"Missing {html_path}"
-    return html_path, torrent_path
+    return (html_path, torrent_path)
 
 
 def sync_source_file(file: str, out_file: str) -> bool:
@@ -99,17 +96,6 @@ def main() -> int:
     # Copy webtorrent.zach.min.js to the output directory
     WEBTORRENT_ZACH_MIN_JS_OUT = os.path.join(OUT_DIR, "webtorrent.zach.min.js")
     sync_source_file(WEBTORRENT_ZACH_MIN_JS, WEBTORRENT_ZACH_MIN_JS_OUT)
-    TRACKER_ANNOUNCE_LIST = [
-        "wss://webtorrent-tracker.onrender.com",
-        "wss://tracker.btorrent.xyz",
-    ]
-    DOMAIN_NAME = os.environ.get(
-        "DOMAIN_NAME", "https://webtorrent-webseed.onrender.com"
-    )
-    STUN_SERVERS = os.environ.get(
-        "STUN_SERVERS",
-        '"stun:relay.socket.dev:443", "stun:global.stun.twilio.com:3478"',
-    )
     prev_cwd = os.getcwd()
     os.chdir(CONTENT_DIR)
     while True:

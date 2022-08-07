@@ -3,13 +3,12 @@ import tempfile
 import unittest
 
 from webtorrent_movie_server.generate_files import create_webtorrent_files, get_files
+from webtorrent_movie_server.settings import (
+    DOMAIN_NAME,
+    STUN_SERVERS,
+    TRACKER_ANNOUNCE_LIST,
+)
 
-STUN_SERVERS = '"stun:relay.socket.dev:443", "stun:global.stun.twilio.com:3478"'
-TRACKER_ANNOUNCE_LIST = [
-    "wss://webtorrent-tracker.onrender.com",
-    "wss://tracker.btorrent.xyz"
-]
-DOMAIN_NAME = "https://webtorrent-webseed.onrender.com"
 
 class GenerateFilesTester(unittest.TestCase):
     """Tester for the server."""

@@ -12,17 +12,21 @@ from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 
+from webtorrent_movie_server.generate_files import create_webtorrent_files
+from webtorrent_movie_server.settings import (
+    DOMAIN_NAME,
+    STUN_SERVERS,
+    TRACKER_ANNOUNCE_LIST,
+)
 from webtorrent_movie_server.version import VERSION
-
-DEFAULT_TRACKER_LIST = ["wss://webtorrent-tracker.onrender.com"]
 
 print("Starting fastapi webtorrent movie server")
 
-FILES_DIR = os.environ.get("FILES_DIR", "/var/data")
-
+HERE = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(__file__)
 HERE = os.path.dirname(__file__)
 ROOT = os.path.dirname(HERE)
-DATA_DIR = os.environ.get("DATA_DIR", os.path.join(ROOT, "data"))
+DATA_DIR = os.environ.get("DATA_DIR", os.path.join(PROJECT_ROOT, "data"))
 os.makedirs(DATA_DIR, exist_ok=True)
 app_state = KeyValueSqlite(os.path.join(DATA_DIR, "app.sqlite"), "app")
 
@@ -107,7 +111,6 @@ async def favicon() -> RedirectResponse:
     """Returns favico file."""
     return RedirectResponse(url="/www/favicon.ico")
 
-
 @app.post("/upload")
 async def upload(  # pylint: disable=too-many-branches
     file: UploadFile = File(...),
@@ -115,8 +118,8 @@ async def upload(  # pylint: disable=too-many-branches
     """Uploads a file to the server."""
     if not file.filename.lower().endswith(".mp4"):
         return PlainTextResponse(status_code=415, content="Invalid file type, must be mp4")
-    if os.path.exists(FILES_DIR):
-        return PlainTextResponse(status_code=500, content="File upload not enabled because FILES_DIR is unset")
+    if not os.path.exists(DATA_DIR):
+        return PlainTextResponse(status_code=500, content=f"File upload not enabled because DATA_DIR {DATA_DIR} does not exist")
 
     print(f"Uploading file: {file.filename}")
     final_path = os.path.join(DATA_DIR, file.filename)
@@ -124,6 +127,13 @@ async def upload(  # pylint: disable=too-many-branches
         while (chunk := await file.read(1024 * 64)) != b"":
             filed.write(chunk)
     await file.close()
+    # TODO: Final check, use ffprobe to check if it is a valid mp4 file that can be
+    # streamed.
+    create_webtorrent_files(file=final_path,
+                            domain_name=DOMAIN_NAME,
+                            tracker_announce_list=TRACKER_ANNOUNCE_LIST,
+                            stun_servers=STUN_SERVERS,
+                            out_dir=DATA_DIR)
     return PlainTextResponse(content=f"wrote file okay at location: {final_path}")
 
 
