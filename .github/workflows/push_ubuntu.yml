@@ -24,5 +24,7 @@ jobs:
           ${{ runner.os }}-pip-
     - name: Bootstrap tox
       run: pip install tox
+    - name: Install mktorrent
+      run: apt-get install mktorrent
     - name: Tox run lint and then run tests
       run:  tox
