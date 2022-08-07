@@ -17,7 +17,6 @@ WEBTORRENT_ZACH_MIN_JS = os.path.join(HERE, "webtorrent.zach.min.js")
 assert os.path.exists(WEBTORRENT_ZACH_MIN_JS), f"Missing {WEBTORRENT_ZACH_MIN_JS}"
 
 
-
 def filemd5(filename):
     with open(filename, mode="rb") as f:
         d = hashlib.md5()
@@ -34,13 +33,14 @@ def get_files(file: str, out_dir: str) -> str:
     return md5file, torrent_path, html_path
 
 
-
-def create_webtorrent_files(file: str,
-                            domain_name: str,
-                            tracker_announce_list: List[str],
-                            stun_servers: str,
-                            out_dir: str,
-                            chunk_factor: int = 17) -> str:
+def create_webtorrent_files(
+    file: str,
+    domain_name: str,
+    tracker_announce_list: List[str],
+    stun_servers: str,
+    out_dir: str,
+    chunk_factor: int = 17,
+) -> str:
     assert tracker_announce_list
     md5file, torrent_path, html_path = get_files(file, out_dir=out_dir)
     # Generate the md5 file
@@ -55,7 +55,7 @@ def create_webtorrent_files(file: str,
     if not os.path.exists(torrent_path):
         # Use which to detect whether the mktorrent binary is available.
         if not shutil.which("mktorrent"):
-           raise OSError("mktorrent not found")
+            raise OSError("mktorrent not found")
         tracker_announce = "-a " + " -a ".join(tracker_announce_list)
         # print(os.environ['path'])
         cmd = f'mktorrent "{file}" {tracker_announce} -l {chunk_factor} -o "{torrent_path}"'
@@ -73,6 +73,7 @@ def create_webtorrent_files(file: str,
             f.write(html)
         assert os.path.exists(html_path), f"Missing {html_path}"
     return html_path, torrent_path
+
 
 def sync_source_file(file: str, out_file: str) -> bool:
     if not os.path.exists(out_file):
@@ -100,12 +101,15 @@ def main() -> int:
     sync_source_file(WEBTORRENT_ZACH_MIN_JS, WEBTORRENT_ZACH_MIN_JS_OUT)
     TRACKER_ANNOUNCE_LIST = [
         "wss://webtorrent-tracker.onrender.com",
-        "wss://tracker.btorrent.xyz"
+        "wss://tracker.btorrent.xyz",
     ]
     DOMAIN_NAME = os.environ.get(
-        "DOMAIN_NAME", "https://webtorrent-webseed.onrender.com")
+        "DOMAIN_NAME", "https://webtorrent-webseed.onrender.com"
+    )
     STUN_SERVERS = os.environ.get(
-        "STUN_SERVERS", '"stun:relay.socket.dev:443", "stun:global.stun.twilio.com:3478"')
+        "STUN_SERVERS",
+        '"stun:relay.socket.dev:443", "stun:global.stun.twilio.com:3478"',
+    )
     prev_cwd = os.getcwd()
     os.chdir(CONTENT_DIR)
     while True:
@@ -127,15 +131,16 @@ def main() -> int:
     html_str = "<html><body><ul>"
     for movie_file in files:
         try:
-            iframe_src, torrent_path = create_webtorrent_files(movie_file,
-                                                               domain_name=DOMAIN_NAME,
-                                                               tracker_announce_list=TRACKER_ANNOUNCE_LIST,
-                                                               stun_servers=STUN_SERVERS,
-                                                               chunk_factor=CHUNK_FACTOR,
-                                                               out_dir=OUT_DIR)
+            iframe_src, torrent_path = create_webtorrent_files(
+                movie_file,
+                domain_name=DOMAIN_NAME,
+                tracker_announce_list=TRACKER_ANNOUNCE_LIST,
+                stun_servers=STUN_SERVERS,
+                chunk_factor=CHUNK_FACTOR,
+                out_dir=OUT_DIR,
+            )
             assert os.path.exists(iframe_src), f"Missing {iframe_src}, skipping"
-            html_str += (
-                f"""
+            html_str += f"""
                 <li>
                 <h3><a href="{os.path.basename(iframe_src)}">{os.path.basename(iframe_src)}</a></h3>
                 <ul>
@@ -143,7 +148,7 @@ def main() -> int:
                     <li><a href="{os.path.basename(torrent_path)}">{os.path.basename(torrent_path)}</a></li>
                 </ul>
                 </li>
-            """)
+            """
         except Exception as e:
             print(f"Failed to create webtorrent files for {movie_file}: {e}")
             continue
