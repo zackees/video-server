@@ -7,6 +7,7 @@ import os
 import threading
 
 from fastapi import FastAPI, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
@@ -26,6 +27,14 @@ os.makedirs(DATA_DIR, exist_ok=True)
 app_state = KeyValueSqlite(os.path.join(DATA_DIR, "app.sqlite"), "app")
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 STARTUP_DATETIME = datetime.datetime.now()
 
@@ -67,10 +76,10 @@ def shutdown_event():
 
 
 # Mount all the static files.
-app.mount("/www",StaticFiles(directory=os.path.join(HERE, "www")), "www")
+app.mount("/www", StaticFiles(directory=os.path.join(HERE, "www")), "www")
 
-if os.path.exists(FILES_DIR):
-    app.mount("/files",StaticFiles(directory='/var/data'), "www")
+#if os.path.exists(FILES_DIR):
+#    app.mount("/files", StaticFiles(directory='/var/data'), "www")
 
 
 # Redirect to index.html
@@ -114,22 +123,8 @@ async def upload(  # pylint: disable=too-many-branches
     with open(final_path, mode="wb") as filed:
         while (chunk := await file.read(1024 * 64)) != b"":
             filed.write(chunk)
-    file.close()
+    await file.close()
     return PlainTextResponse(content=f"wrote file okay at location: {final_path}")
-
-
-@app.get("/accessMagnetURI")
-async def api_add_view(add_view: bool = True) -> JSONResponse:
-    """Get the stored magnet URI and optionally increment the number of views."""
-    magnet_uri = app_state.get("magnetURI")
-    if magnet_uri is not None and add_view:
-        app_state.atomic_add("views", 1)
-    out = {
-        "views": app_state.get("views", 0),
-        "magnetURI": magnet_uri or "None",
-        "add_view": add_view,
-    }
-    return JSONResponse(content=out)
 
 
 @app.get("/info")
@@ -144,16 +139,9 @@ async def api_info() -> JSONResponse:
         "Thread ID": get_current_thread_id(),
         "Number of Views": app_data.get("views", 0),
         "App state": app_data,
+        "DATA_DIR": DATA_DIR,
     }
     return JSONResponse(out)
-
-
-@app.get("/stats")
-async def api_views() -> JSONResponse:
-    """Returns the current number of views."""
-    app_data = app_state.to_dict()
-    views = str(app_data.get("views", 0))
-    return JSONResponse({"views": views})
 
 
 def touch(fname):
@@ -162,7 +150,7 @@ def touch(fname):
     os.utime(fname, None)
 
 
-@app.get("/clear")
+@app.delete("/clear")
 async def clear() -> PlainTextResponse:
     """Clears the stored magnet URI."""
     app_state.clear()
