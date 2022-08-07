@@ -1,4 +1,5 @@
 import os
+import sys
 import tempfile
 import unittest
 
@@ -16,14 +17,15 @@ class GenerateFilesTester(unittest.TestCase):
     def test_get_files(self) -> None:
         """Opens up the server and tests that the version returned is correct."""
         actual = get_files("blah.mp4", out_dir="out")
-        if os.name == "nt":
+        if sys.platform == "win32":
             expected = ('out\\blah.mp4.md5', 'out\\blah.mp4.torrent', 'out\\blah.mp4.torrent.html')
         else:
             expected = ('out/blah.mp4.md5', 'out/blah.mp4.torrent', 'out/blah.mp4.torrent.html')
         self.assertEqual(expected, actual)
 
+    @unittest.skipIf(sys.platform == "win32", "Not supported on Windows")
     def test_create_webtorrent_files(self) -> None:
-        """Opens up the server and tests that the version returned is correct."""
+        """Tests that the files can be created ok."""
         # Create a temporary folder.
         with tempfile.TemporaryDirectory() as tmpdirname:
             mp4 = os.path.join(tmpdirname, "test.mp4")

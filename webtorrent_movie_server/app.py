@@ -23,7 +23,7 @@ from webtorrent_movie_server.version import VERSION
 print("Starting fastapi webtorrent movie server")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(__file__)
+PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 HERE = os.path.dirname(__file__)
 ROOT = os.path.dirname(HERE)
 DATA_DIR = os.environ.get("DATA_DIR", os.path.join(PROJECT_ROOT, "data"))
@@ -111,15 +111,21 @@ async def favicon() -> RedirectResponse:
     """Returns favico file."""
     return RedirectResponse(url="/www/favicon.ico")
 
+
 @app.post("/upload")
 async def upload(  # pylint: disable=too-many-branches
     file: UploadFile = File(...),
 ) -> PlainTextResponse:
     """Uploads a file to the server."""
     if not file.filename.lower().endswith(".mp4"):
-        return PlainTextResponse(status_code=415, content="Invalid file type, must be mp4")
+        return PlainTextResponse(
+            status_code=415, content="Invalid file type, must be mp4"
+        )
     if not os.path.exists(DATA_DIR):
-        return PlainTextResponse(status_code=500, content=f"File upload not enabled because DATA_DIR {DATA_DIR} does not exist")
+        return PlainTextResponse(
+            status_code=500,
+            content=f"File upload not enabled because DATA_DIR {DATA_DIR} does not exist",
+        )
 
     print(f"Uploading file: {file.filename}")
     final_path = os.path.join(DATA_DIR, file.filename)
@@ -127,13 +133,15 @@ async def upload(  # pylint: disable=too-many-branches
         while (chunk := await file.read(1024 * 64)) != b"":
             filed.write(chunk)
     await file.close()
-    # TODO: Final check, use ffprobe to check if it is a valid mp4 file that can be
+    # TODO: Final check, use ffprobe to check if it is a valid mp4 file that can be  # pylint: disable=fixme
     # streamed.
-    create_webtorrent_files(file=final_path,
-                            domain_name=DOMAIN_NAME,
-                            tracker_announce_list=TRACKER_ANNOUNCE_LIST,
-                            stun_servers=STUN_SERVERS,
-                            out_dir=DATA_DIR)
+    create_webtorrent_files(
+        file=final_path,
+        domain_name=DOMAIN_NAME,
+        tracker_announce_list=TRACKER_ANNOUNCE_LIST,
+        stun_servers=STUN_SERVERS,
+        out_dir=DATA_DIR,
+    )
     return PlainTextResponse(content=f"wrote file okay at location: {final_path}")
 
 
@@ -156,7 +164,9 @@ async def api_info() -> JSONResponse:
 
 def touch(fname):
     """Touches file"""
-    open(fname, encoding="utf-8", mode="a").close()  # pylint: disable=consider-using-with
+    open(  # pylint: disable=consider-using-with
+        fname, encoding="utf-8", mode="a"
+    ).close()
     os.utime(fname, None)
 
 
