@@ -3,4 +3,3 @@ python ./make_venv.py
 . ./activate.sh
 python -m pip install pip --upgrade
 python -m pip install . -e
-npm install -g https://github.com/zackees/webtorrent-hybrid
