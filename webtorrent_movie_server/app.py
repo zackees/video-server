@@ -74,7 +74,7 @@ async def startup_event():
     """Event handler for when the app starts up."""
     print("Startup event")
     LOG.write("Startup event\n")
-    init_static_files(DATA_ROOT)
+    init_static_files(WWW_ROOT)
 
 
 @app.on_event("shutdown")
