@@ -111,11 +111,13 @@ def sync_source_file(file: str, out_file: str) -> bool:
         return True
     return False
 
+
 def init_static_files(out_dir: str) -> None:
     """Initializes the static files."""
     assert os.path.exists(out_dir)
     WEBTORRENT_ZACH_MIN_JS_OUT = os.path.join(out_dir, "webtorrent.zach.min.js")
     sync_source_file(WEBTORRENT_ZACH_MIN_JS, WEBTORRENT_ZACH_MIN_JS_OUT)
+
 
 def main() -> int:
     """Main entry point, deprecated and will be removed."""
@@ -141,9 +143,7 @@ def main() -> int:
         if not files:
             return 0
         # Get the most recent time stamps
-        newest_file = sorted(files, key=lambda f: os.path.getmtime(f))[
-            0
-        ]
+        newest_file = sorted(files, key=lambda f: os.path.getmtime(f))[0]
         # If newest_file is younger than 10 seconds, then wait then try again
         if os.path.getmtime(newest_file) > time.time() - 10:
             time.sleep(1)

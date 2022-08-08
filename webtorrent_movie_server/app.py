@@ -12,7 +12,10 @@ from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 
-from webtorrent_movie_server.generate_files import create_webtorrent_files, init_static_files
+from webtorrent_movie_server.generate_files import (
+    create_webtorrent_files,
+    init_static_files,
+)
 from webtorrent_movie_server.settings import (
     DOMAIN_NAME,
     STUN_SERVERS,
@@ -27,7 +30,7 @@ PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 HERE = os.path.dirname(__file__)
 ROOT = os.path.dirname(HERE)
 DATA_ROOT = os.environ.get("DATA_ROOT", os.path.join(PROJECT_ROOT, "data"))
-CONTENT_ROOT =  os.path.join(PROJECT_ROOT, "content")
+CONTENT_ROOT = os.path.join(PROJECT_ROOT, "content")
 os.makedirs(DATA_ROOT, exist_ok=True)
 app_state = KeyValueSqlite(os.path.join(DATA_ROOT, "app.sqlite"), "app")
 
@@ -145,6 +148,7 @@ async def upload(  # pylint: disable=too-many-branches
         out_dir=DATA_ROOT,
     )
     return PlainTextResponse(content=f"wrote file okay at location: {final_path}")
+
 
 def list_all_files(start_dir: str) -> list[str]:
     """List all files in a directory."""
