@@ -30,8 +30,6 @@ from webtorrent_movie_server.settings import (
     LOGFILE,
     WWW_ROOT,
     VIDEO_ROOT,
-    DOMAIN_URL,
-    DOMAIN_URL_FILES,
 )
 from webtorrent_movie_server.version import VERSION
 
@@ -132,9 +130,11 @@ async def api_info() -> JSONResponse:
     all_files = list_all_files(DATA_ROOT)
     mp4_files = [f for f in all_files if f.lower().endswith(".mp4")]
     app_data = app_state.to_dict()
-    links = [f.replace(WWW_ROOT, DOMAIN_URL_FILES) for f in list_all_files(WWW_ROOT)]
-    vid_names = [os.path.basename(os.path.dirname(mp4)) for mp4 in mp4_files]
-    vid_links = [f"{DOMAIN_URL}/video?name={name}" for name in vid_names]
+    if "localhost" in DOMAIN_NAME:
+        domain_url = f"http://{DOMAIN_NAME}"
+    else:
+        domain_url = f"https://{DOMAIN_NAME}"
+    links = [f.replace(WWW_ROOT, domain_url) for f in list_all_files(WWW_ROOT)]
     out = {
         "version": VERSION,
         "Launched at": str(STARTUP_DATETIME),
@@ -152,7 +152,6 @@ async def api_info() -> JSONResponse:
         "MP4 files": mp4_files,
         "All files": list_all_files(DATA_ROOT),
         "Links": links,
-        "Vid Links": vid_links,
     }
     return JSONResponse(out)
 
@@ -210,27 +209,6 @@ def touch(fname):
         fname, encoding="utf-8", mode="a"
     ).close()
     os.utime(fname, None)
-
-
-@app.get("/video")
-async def video_endpoint(name: str, byte_range: str = Header(None)):
-    """Video input for streaming file chunks."""
-    video_path = Path(os.path.join(VIDEO_ROOT, name, "vid.mp4"))
-    if byte_range is None:
-        return FileResponse(video_path, media_type="video/mp4")
-    _start, _end = byte_range.replace("bytes=", "").split("-")
-    start: int = int(_start)
-    end: int = int(_end) if _end else start + CHUNK_SIZE
-    with open(video_path, "rb") as video:
-        video.seek(start)
-        data = video.read(end - start)
-        filesize = str(video_path.stat().st_size)
-        headers = {
-            "Content-Range": f"bytes {str(start)}-{str(end)}/{filesize}",
-            "Accept-Ranges": "bytes",
-        }
-        return Response(data, status_code=206, headers=headers, media_type="video/mp4")
-
 
 
 @app.delete("/clear")
