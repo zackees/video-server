@@ -1,7 +1,7 @@
 """
     Fastapi server
 """
-
+import secrets
 import datetime
 import os
 import shutil
@@ -9,10 +9,11 @@ import threading
 
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 
 from webtorrent_movie_server.generate_files import (
@@ -40,6 +41,8 @@ app_state = KeyValueSqlite(APP_DB, "app")
 # VIDEO_ROOT = os.path.join(DATA_ROOT, "v")
 
 app = FastAPI()
+
+security = HTTPBasic()
 
 app.add_middleware(
     CORSMiddleware,
@@ -72,6 +75,23 @@ def get_current_thread_id() -> int:
     if ident is None:
         return -1
     return int(ident)
+
+
+def authorize(credentials: HTTPBasicCredentials = Depends(security)):
+    """Authorize the user."""
+    is_user_ok = secrets.compare_digest(credentials.username, os.getenv('LOGIN', 'LOGIN'))
+    is_pass_ok = secrets.compare_digest(credentials.password, os.getenv('PASSWORD', 'PASSWORD'))
+
+    if not (is_user_ok and is_pass_ok):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Incorrect email or password.',
+            headers={'WWW-Authenticate': 'Basic'},
+        )
+
+# @app.get('/api/access/auth', dependencies=[Depends(authorize)])
+# def auth():
+#    return {"Granted": True}
 
 
 @app.on_event("startup")
@@ -155,7 +175,7 @@ async def api_info() -> JSONResponse:
     return JSONResponse(out)
 
 
-@app.post("/upload")
+@app.post("/upload", dependencies=[Depends(authorize)])
 async def upload(  # pylint: disable=too-many-branches
     file: UploadFile = File(...),
 ) -> PlainTextResponse:
@@ -210,7 +230,7 @@ def touch(fname):
     os.utime(fname, None)
 
 
-@app.delete("/clear")
+@app.delete("/clear", dependencies=[Depends(authorize)])
 async def clear() -> PlainTextResponse:
     """Clears the stored magnet URI."""
     # app_state.clear()
