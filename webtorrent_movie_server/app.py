@@ -138,6 +138,7 @@ async def upload(  # pylint: disable=too-many-branches
     out_dir = os.path.join(
         VIDEO_ROOT, os.path.splitext(os.path.basename(file.filename))[0]
     )
+    os.makedirs(out_dir, exist_ok=True)
     final_path = os.path.join(out_dir, "vid.mp4")
     with open(final_path, mode="wb") as filed:
         while (chunk := await file.read(1024 * 64)) != b"":
