@@ -70,6 +70,7 @@ def create_webtorrent_files(
 ) -> Tuple[str, str]:
     """Generates the webtorrent files for a given video file."""
     assert tracker_announce_list
+    os.makedirs(out_dir, exist_ok=True)
     md5file, torrent_path, html_path = get_files(file, out_dir=out_dir)
     # Generate the md5 file
     md5 = filemd5(file)

@@ -4,6 +4,7 @@
 
 import datetime
 import os
+import shutil
 import threading
 
 from fastapi import FastAPI, File, UploadFile
@@ -33,6 +34,7 @@ DATA_ROOT = os.environ.get("DATA_ROOT", os.path.join(PROJECT_ROOT, "data"))
 CONTENT_ROOT = os.path.join(PROJECT_ROOT, "content")
 os.makedirs(DATA_ROOT, exist_ok=True)
 app_state = KeyValueSqlite(os.path.join(DATA_ROOT, "app.sqlite"), "app")
+VIDEO_ROOT = os.path.join(DATA_ROOT, "v")
 
 app = FastAPI()
 
@@ -85,7 +87,7 @@ def shutdown_event():
 
 
 # Mount all the static files.
-app.mount("/www", StaticFiles(directory=os.path.join(HERE, "www")), "www")
+app.mount("/www", StaticFiles(directory=DATA_ROOT), "www")
 
 # if os.path.exists(FILES_DIR):
 #    app.mount("/files", StaticFiles(directory='/var/data'), "www")
@@ -131,23 +133,25 @@ async def upload(  # pylint: disable=too-many-branches
             status_code=500,
             content=f"File upload not enabled because DATA_ROOT {DATA_ROOT} does not exist",
         )
+    # Use the name of the file as the folder for the new content.
 
     print(f"Uploading file: {file.filename}")
-    final_path = os.path.join(DATA_ROOT, file.filename)
+    out_dir = os.path.join(
+        VIDEO_ROOT, os.path.splitext(os.path.basename(file.filename))[0]
+    )
+    final_path = os.path.join(out_dir, "vid.mp4")
     with open(final_path, mode="wb") as filed:
         while (chunk := await file.read(1024 * 64)) != b"":
             filed.write(chunk)
     await file.close()
     # TODO: Final check, use ffprobe to check if it is a valid mp4 file that can be  # pylint: disable=fixme
     # streamed.
-    # Use the name of the file as the folder for the new content.
-    out_dir = os.path.join(DATA_ROOT, os.path.splitext(os.path.basename(final_path))[0])
     create_webtorrent_files(
         file=final_path,
         domain_name=DOMAIN_NAME,
         tracker_announce_list=TRACKER_ANNOUNCE_LIST,
         stun_servers=STUN_SERVERS,
-        out_dir=out_dir,
+        out_dir=os.path.dirname(out_dir),
     )
     return PlainTextResponse(content=f"wrote file okay at location: {final_path}")
 
@@ -193,9 +197,11 @@ def touch(fname):
 @app.delete("/clear")
 async def clear() -> PlainTextResponse:
     """Clears the stored magnet URI."""
-    app_state.clear()
+    # app_state.clear()
     # use os.touch to trigger a restart on this server.
-    touch(os.path.join(ROOT, "restart", "restart.file"))
+    # touch(os.path.join(ROOT, "restart", "restart.file"))
+    shutil.rmtree(VIDEO_ROOT, ignore_errors=True)
+    os.makedirs(VIDEO_ROOT, exist_ok=True)
     return PlainTextResponse(content="Server queued for restart.")
 
 
