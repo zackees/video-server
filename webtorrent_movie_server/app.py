@@ -86,7 +86,7 @@ def shutdown_event():
 
 
 # Mount all the static files.
-app.mount("/www", StaticFiles(directory=WWW_ROOT), "www")
+app.mount("/www", StaticFiles(directory=WWW_ROOT, html=True), "www")
 
 # if os.path.exists(FILES_DIR):
 #    app.mount("/files", StaticFiles(directory='/var/data'), "www")
