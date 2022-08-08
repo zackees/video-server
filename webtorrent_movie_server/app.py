@@ -140,12 +140,14 @@ async def upload(  # pylint: disable=too-many-branches
     await file.close()
     # TODO: Final check, use ffprobe to check if it is a valid mp4 file that can be  # pylint: disable=fixme
     # streamed.
+    # Use the name of the file as the folder for the new content.
+    out_dir = os.path.join(DATA_ROOT, os.path.splitext(os.path.basename(final_path))[0])
     create_webtorrent_files(
         file=final_path,
         domain_name=DOMAIN_NAME,
         tracker_announce_list=TRACKER_ANNOUNCE_LIST,
         stun_servers=STUN_SERVERS,
-        out_dir=DATA_ROOT,
+        out_dir=out_dir,
     )
     return PlainTextResponse(content=f"wrote file okay at location: {final_path}")
 
