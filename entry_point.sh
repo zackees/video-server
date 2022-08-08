@@ -1,6 +1,9 @@
+
+# If $DATA_ROOT is unset
+if [ -z "$DATA_ROOT" ]; then
+    DATA_ROOT="/app/var/data"
+fi
 # get default DATA_DIR
-DATA_ROOT=${DATA_DIR:-/app/var/data}
-export DATA_ROOT=$DATA_ROOT
 mkdir -p $DATA_ROOT
 # First launch the uvicorn server
 uvicorn --host localhost --port 8000 --reload --reload-dir restart --workers 100 --forwarded-allow-ips=* webtorrent_movie_server.app:app &
