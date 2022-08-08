@@ -21,20 +21,18 @@ from webtorrent_movie_server.settings import (
     DOMAIN_NAME,
     STUN_SERVERS,
     TRACKER_ANNOUNCE_LIST,
+    APP_DB,
+    DATA_ROOT,
+    LOGFILE,
+    WWW_ROOT,
+    VIDEO_ROOT
 )
 from webtorrent_movie_server.version import VERSION
 
 print("Starting fastapi webtorrent movie server")
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
-HERE = os.path.dirname(__file__)
-ROOT = os.path.dirname(HERE)
-DATA_ROOT = os.environ.get("DATA_ROOT", os.path.join(PROJECT_ROOT, "data"))
-CONTENT_ROOT = os.path.join(PROJECT_ROOT, "content")
-os.makedirs(DATA_ROOT, exist_ok=True)
-app_state = KeyValueSqlite(os.path.join(DATA_ROOT, "app.sqlite"), "app")
-VIDEO_ROOT = os.path.join(DATA_ROOT, "v")
+app_state = KeyValueSqlite(APP_DB, "app")
+# VIDEO_ROOT = os.path.join(DATA_ROOT, "v")
 
 app = FastAPI()
 
@@ -53,13 +51,14 @@ PASSWORD = os.environ.get(
 )  # TODO: implement this  # pylint: disable=fixme
 
 
-LOGFILE = os.path.join(DATA_ROOT, "log.txt")
 LOG = open(LOGFILE, encoding="utf-8", mode="a")  # pylint: disable=consider-using-with
 
 
 def log_error(msg: str) -> None:
     """Logs an error to the print stream."""
+    # print(msg)
     print(msg)
+    LOG.write(msg + "\n")
 
 
 def get_current_thread_id() -> int:
@@ -87,7 +86,7 @@ def shutdown_event():
 
 
 # Mount all the static files.
-app.mount("/www", StaticFiles(directory=DATA_ROOT), "www")
+app.mount("/www", StaticFiles(directory=WWW_ROOT), "www")
 
 # if os.path.exists(FILES_DIR):
 #    app.mount("/files", StaticFiles(directory='/var/data'), "www")
