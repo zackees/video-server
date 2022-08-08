@@ -171,10 +171,10 @@ async def api_info() -> JSONResponse:
         "MP4 files": mp4_files,
         "All files": list_all_files(DATA_ROOT),
         "Links": links,
-        "Videos": [
+        "Videos": sorted([
             link.replace("/index.html", "") for link in links
             if link.endswith("/index.html")
-        ],
+        ]),
     }
     return JSONResponse(out)
 
