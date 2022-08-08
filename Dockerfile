@@ -20,4 +20,4 @@ COPY . .
 RUN python -m pip install -e .
 # Expose the port and then launch the app.
 EXPOSE 80
-CMD ["uvicorn", "--host", "0.0.0.0", "--reload", "--reload-dir", "restart", "--workers", "1", "--forwarded-allow-ips=*", "--port", "80", "webtorrent_movie_server.app:app"]
+CMD ["uvicorn", "--host", "0.0.0.0", "--reload", "--reload-dir", "restart", "--workers", "100", "--forwarded-allow-ips=*", "--port", "80", "webtorrent_movie_server.app:app"]

@@ -90,7 +90,7 @@ def create_webtorrent_files(
     os.system(cmd)
     vid_name = os.path.basename(os.path.dirname(file))
     assert os.path.exists(torrent_path), f"Missing expected {torrent_path}"
-    torrent_id = f"https://{domain_name}/v/{vid_name}/index.torrent"
+    torrent_id = f"https://{domain_name}/www/v/{vid_name}/index.torrent"
     webseed = f"https://{domain_name}/video?name={vid_name}"
     html = HTML_TEMPLATE.replace("__TORRENT_URL__", torrent_id)
     html = html.replace("__WEBSEED__", webseed)
