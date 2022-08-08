@@ -22,6 +22,7 @@ from webtorrent_movie_server.generate_files import (
 )
 from webtorrent_movie_server.settings import (
     DOMAIN_NAME,
+    PROJECT_ROOT,
     STUN_SERVERS,
     TRACKER_ANNOUNCE_LIST,
     APP_DB,
@@ -142,7 +143,11 @@ async def api_info() -> JSONResponse:
         "Thread ID": get_current_thread_id(),
         "Number of Views": app_data.get("views", 0),
         "App state": app_data,
+        "PROJECT_ROOT": PROJECT_ROOT,
         "DATA_ROOT": DATA_ROOT,
+        "WWW_ROOT": WWW_ROOT,
+        "VIDEO_ROOT": VIDEO_ROOT,
+        "LOGFILE": LOGFILE,
         "Number of MP4 files": len(mp4_files),
         "MP4 files": mp4_files,
         "All files": list_all_files(DATA_ROOT),
