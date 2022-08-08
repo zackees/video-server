@@ -8,3 +8,5 @@ services:
         target: 80
       - published: 8000
         target: 8000
+    environment:
+      - DOMAIN_NAME=localhost
