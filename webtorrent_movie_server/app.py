@@ -12,7 +12,7 @@ from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 
 from fastapi import FastAPI, File, UploadFile, Header, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
 
@@ -209,19 +209,22 @@ def touch(fname):
 @app.get("/video")
 async def video_endpoint(name: str, byte_range: str = Header(None)):
     """Video input for streaming file chunks."""
-    _start, _end = byte_range.replace("bytes=", "").split("-")
-    start: int = int(_start)
-    end: int = int(_end) if _end else start + CHUNK_SIZE
     video_path = Path(os.path.join(VIDEO_ROOT, name, "vid.mp4"))
-    with open(video_path, "rb") as video:
-        video.seek(start)
-        data = video.read(end - start)
-        filesize = str(video_path.stat().st_size)
-        headers = {
-            "Content-Range": f"bytes {str(start)}-{str(end)}/{filesize}",
-            "Accept-Ranges": "bytes",
-        }
-        return Response(data, status_code=206, headers=headers, media_type="video/mp4")
+    if byte_range is not None:
+        _start, _end = byte_range.replace("bytes=", "").split("-")
+        start: int = int(_start)
+        end: int = int(_end) if _end else start + CHUNK_SIZE
+        with open(video_path, "rb") as video:
+            video.seek(start)
+            data = video.read(end - start)
+            filesize = str(video_path.stat().st_size)
+            headers = {
+                "Content-Range": f"bytes {str(start)}-{str(end)}/{filesize}",
+                "Accept-Ranges": "bytes",
+            }
+            return Response(data, status_code=206, headers=headers, media_type="video/mp4")
+    else:
+        return FileResponse(video_path, media_type="video/mp4")
 
 
 @app.delete("/clear")
