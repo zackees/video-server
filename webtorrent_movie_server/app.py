@@ -123,6 +123,7 @@ async def api_info() -> JSONResponse:
     """Returns the current time and the number of seconds since the server started."""
     mp4_files = [f for f in os.listdir(DATA_ROOT) if f.lower().endswith(".mp4")]
     app_data = app_state.to_dict()
+    links = [f.replace(DATA_ROOT, DOMAIN_NAME) for f in list_all_files(WWW_ROOT)]
     out = {
         "version": VERSION,
         "Launched at": str(STARTUP_DATETIME),
@@ -135,6 +136,7 @@ async def api_info() -> JSONResponse:
         "Number of MP4 files": len(mp4_files),
         "MP4 files": mp4_files,
         "All files": list_all_files(DATA_ROOT),
+        "Links": links,
     }
     return JSONResponse(out)
 
