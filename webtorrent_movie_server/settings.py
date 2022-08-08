@@ -10,6 +10,7 @@ TRACKER_ANNOUNCE_LIST = [
     "wss://tracker.btorrent.xyz",
 ]
 DOMAIN_NAME = os.environ.get("DOMAIN_NAME", "video-server.onrender.com/www")
+DOMAIN_URL = f"https://{DOMAIN_NAME}"
 STUN_SERVERS = os.environ.get(
     "STUN_SERVERS", '"stun:relay.socket.dev:443", "stun:global.stun.twilio.com:3478"'
 )
