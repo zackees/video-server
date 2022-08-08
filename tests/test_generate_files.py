@@ -16,11 +16,11 @@ class GenerateFilesTester(unittest.TestCase):
 
     def test_get_files(self) -> None:
         """Opens up the server and tests that the version returned is correct."""
-        actual = get_files("blah.mp4", out_dir="out")
+        actual = get_files(out_dir="out")
         if sys.platform == "win32":
-            expected = ('out\\blah.mp4.md5', 'out\\blah.mp4.torrent', 'out\\blah.mp4.torrent.html')
+            expected = ('out\\index.md5', 'out\\index.torrent', 'out\\index.html')
         else:
-            expected = ('out/blah.mp4.md5', 'out/blah.mp4.torrent', 'out/blah.mp4.torrent.html')
+            expected = ('out/index.md5', 'out/index.torrent', 'out/index.html')
         self.assertEqual(expected, actual)
 
     @unittest.skipIf(sys.platform == "win32", "Not supported on Windows")

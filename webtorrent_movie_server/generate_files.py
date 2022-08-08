@@ -49,14 +49,11 @@ def filemd5(filename):
     return d.hexdigest()
 
 
-def get_files(
-    file: str, out_dir: str
-) -> Tuple[str, str, str]:  # pylint: disable=too-many-locals
+def get_files(out_dir: str) -> Tuple[str, str, str]:  # pylint: disable=too-many-locals
     """Gets all the artificate names from the source file."""
-    filename = os.path.basename(file)
-    md5file = os.path.join(out_dir, f"{filename}.md5")
-    torrent_path = os.path.join(out_dir, filename + ".torrent")
-    html_path = os.path.join(torrent_path + ".html")
+    md5file = os.path.join(out_dir, "index.md5")
+    torrent_path = os.path.join(out_dir, "index.torrent")
+    html_path = os.path.join(out_dir, "index.html")
     return md5file, torrent_path, html_path
 
 
@@ -71,7 +68,7 @@ def create_webtorrent_files(
     """Generates the webtorrent files for a given video file."""
     assert tracker_announce_list
     os.makedirs(out_dir, exist_ok=True)
-    md5file, torrent_path, html_path = get_files(file, out_dir=out_dir)
+    md5file, torrent_path, html_path = get_files(out_dir=out_dir)
     # Generate the md5 file
     md5 = filemd5(file)
     if not os.path.exists(md5file) or md5 != read_utf8(md5file):

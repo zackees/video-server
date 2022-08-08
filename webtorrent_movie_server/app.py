@@ -25,7 +25,7 @@ from webtorrent_movie_server.settings import (
     DATA_ROOT,
     LOGFILE,
     WWW_ROOT,
-    VIDEO_ROOT
+    VIDEO_ROOT,
 )
 from webtorrent_movie_server.version import VERSION
 
@@ -151,7 +151,7 @@ async def upload(  # pylint: disable=too-many-branches
         domain_name=DOMAIN_NAME,
         tracker_announce_list=TRACKER_ANNOUNCE_LIST,
         stun_servers=STUN_SERVERS,
-        out_dir=os.path.dirname(final_path),
+        out_dir=out_dir,
     )
     return PlainTextResponse(content=f"wrote file okay at location: {final_path}")
 
