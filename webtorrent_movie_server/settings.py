@@ -18,7 +18,9 @@ STUN_SERVERS = os.environ.get(
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
-DATA_ROOT = os.path.abspath(os.environ.get("DATA_ROOT", os.path.join(PROJECT_ROOT, "var", "data")))
+DATA_ROOT = os.path.abspath(
+    os.environ.get("DATA_ROOT", os.path.join(PROJECT_ROOT, "var", "data"))
+)
 WWW_ROOT = os.path.join(DATA_ROOT, "www")
 VIDEO_ROOT = os.path.join(WWW_ROOT, "v")
 APP_DB = os.path.join(DATA_ROOT, "app.sqlite")

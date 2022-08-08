@@ -189,7 +189,6 @@ def list_all_files(start_dir: str) -> list[str]:
     return files
 
 
-
 def touch(fname):
     """Touches file"""
     open(  # pylint: disable=consider-using-with
