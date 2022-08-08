@@ -23,5 +23,5 @@ VIDEO_ROOT = os.path.join(WWW_ROOT, "v")
 APP_DB = os.path.join(DATA_ROOT, "app.sqlite")
 LOGFILE = os.path.join(DATA_ROOT, "log.txt")
 
-for dir in [DATA_ROOT, WWW_ROOT, VIDEO_ROOT]:
-    os.makedirs(dir, exist_ok=True)
+for mydir in [DATA_ROOT, WWW_ROOT, VIDEO_ROOT]:
+    os.makedirs(mydir, exist_ok=True)
