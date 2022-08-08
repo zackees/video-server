@@ -151,7 +151,7 @@ async def upload(  # pylint: disable=too-many-branches
         domain_name=DOMAIN_NAME,
         tracker_announce_list=TRACKER_ANNOUNCE_LIST,
         stun_servers=STUN_SERVERS,
-        out_dir=os.path.dirname(out_dir),
+        out_dir=os.path.dirname(final_path),
     )
     return PlainTextResponse(content=f"wrote file okay at location: {final_path}")
 
