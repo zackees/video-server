@@ -134,7 +134,7 @@ async def api_info() -> JSONResponse:
     app_data = app_state.to_dict()
     links = [f.replace(WWW_ROOT, DOMAIN_URL) for f in list_all_files(WWW_ROOT)]
     vid_names = [os.path.basename(os.path.dirname(mp4)) for mp4 in mp4_files]
-    vid_links = [f"{DOMAIN_URL}/video?name={f}" for f in mp4_files]
+    vid_links = [f"{DOMAIN_URL}/video?name={name}" for name in vid_names]
     out = {
         "version": VERSION,
         "Launched at": str(STARTUP_DATETIME),
