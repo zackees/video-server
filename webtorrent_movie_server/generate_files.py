@@ -36,7 +36,7 @@ def write_utf8(file: str, contents: str) -> None:
 
 
 HTML_TEMPLATE = read_utf8(os.path.join(HERE, "template.html"))
-WEBTORRENT_ZACH_MIN_JS = os.path.join(HERE, "webtorrent.zach.min.js")
+WEBTORRENT_ZACH_MIN_JS = os.path.abspath(os.path.join(HERE, "webtorrent.zach.min.js"))
 assert os.path.exists(WEBTORRENT_ZACH_MIN_JS), f"Missing {WEBTORRENT_ZACH_MIN_JS}"
 
 
@@ -111,6 +111,11 @@ def sync_source_file(file: str, out_file: str) -> bool:
         return True
     return False
 
+def init_static_files(out_dir: str) -> None:
+    """Initializes the static files."""
+    assert os.path.exists(out_dir)
+    WEBTORRENT_ZACH_MIN_JS_OUT = os.path.join(out_dir, "webtorrent.zach.min.js")
+    sync_source_file(WEBTORRENT_ZACH_MIN_JS, WEBTORRENT_ZACH_MIN_JS_OUT)
 
 def main() -> int:
     """Main entry point, deprecated and will be removed."""
@@ -123,9 +128,7 @@ def main() -> int:
     CONTENT_DIR = os.path.join(OUT_DIR, "content")
     os.makedirs(CONTENT_DIR, exist_ok=True)
     os.makedirs(OUT_DIR, exist_ok=True)
-    # Copy webtorrent.zach.min.js to the output directory
-    WEBTORRENT_ZACH_MIN_JS_OUT = os.path.join(OUT_DIR, "webtorrent.zach.min.js")
-    sync_source_file(WEBTORRENT_ZACH_MIN_JS, WEBTORRENT_ZACH_MIN_JS_OUT)
+    init_static_files(OUT_DIR)
     prev_cwd = os.getcwd()
     os.chdir(CONTENT_DIR)
     while True:

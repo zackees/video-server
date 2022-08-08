@@ -5,4 +5,4 @@
 [![Actions Status](https://github.com/zackees/webtorrent-movie-server/workflows/Ubuntu_Tests/badge.svg)](https://github.com/zackees/webtorrent-movie-server/actions/workflows/push_ubuntu.yml)
 
 
-TODO: Add to readme.
+This open source video server uses blockchain technology to turn your viewers into decentralized rebroadcasters. Allows high quality streams at a fraction of the cost.

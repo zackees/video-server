@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 
-from webtorrent_movie_server.generate_files import create_webtorrent_files
+from webtorrent_movie_server.generate_files import create_webtorrent_files, init_static_files
 from webtorrent_movie_server.settings import (
     DOMAIN_NAME,
     STUN_SERVERS,
@@ -26,9 +26,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 HERE = os.path.dirname(__file__)
 ROOT = os.path.dirname(HERE)
-DATA_DIR = os.environ.get("DATA_DIR", os.path.join(PROJECT_ROOT, "data"))
-os.makedirs(DATA_DIR, exist_ok=True)
-app_state = KeyValueSqlite(os.path.join(DATA_DIR, "app.sqlite"), "app")
+DATA_ROOT = os.environ.get("DATA_ROOT", os.path.join(PROJECT_ROOT, "data"))
+CONTENT_ROOT =  os.path.join(PROJECT_ROOT, "content")
+os.makedirs(DATA_ROOT, exist_ok=True)
+app_state = KeyValueSqlite(os.path.join(DATA_ROOT, "app.sqlite"), "app")
 
 app = FastAPI()
 
@@ -47,7 +48,7 @@ PASSWORD = os.environ.get(
 )  # TODO: implement this  # pylint: disable=fixme
 
 
-LOGFILE = os.path.join(DATA_DIR, "log.txt")
+LOGFILE = os.path.join(DATA_ROOT, "log.txt")
 LOG = open(LOGFILE, encoding="utf-8", mode="a")  # pylint: disable=consider-using-with
 
 
@@ -69,6 +70,7 @@ async def startup_event():
     """Event handler for when the app starts up."""
     print("Startup event")
     LOG.write("Startup event\n")
+    init_static_files(DATA_ROOT)
 
 
 @app.on_event("shutdown")
@@ -121,14 +123,14 @@ async def upload(  # pylint: disable=too-many-branches
         return PlainTextResponse(
             status_code=415, content="Invalid file type, must be mp4"
         )
-    if not os.path.exists(DATA_DIR):
+    if not os.path.exists(DATA_ROOT):
         return PlainTextResponse(
             status_code=500,
-            content=f"File upload not enabled because DATA_DIR {DATA_DIR} does not exist",
+            content=f"File upload not enabled because DATA_ROOT {DATA_ROOT} does not exist",
         )
 
     print(f"Uploading file: {file.filename}")
-    final_path = os.path.join(DATA_DIR, file.filename)
+    final_path = os.path.join(DATA_ROOT, file.filename)
     with open(final_path, mode="wb") as filed:
         while (chunk := await file.read(1024 * 64)) != b"":
             filed.write(chunk)
@@ -140,14 +142,23 @@ async def upload(  # pylint: disable=too-many-branches
         domain_name=DOMAIN_NAME,
         tracker_announce_list=TRACKER_ANNOUNCE_LIST,
         stun_servers=STUN_SERVERS,
-        out_dir=DATA_DIR,
+        out_dir=DATA_ROOT,
     )
     return PlainTextResponse(content=f"wrote file okay at location: {final_path}")
+
+def list_all_files(start_dir: str) -> list[str]:
+    """List all files in a directory."""
+    files = []
+    for dir_name, _, file_list in os.walk(start_dir):
+        for filename in file_list:
+            files.append(os.path.join(dir_name, filename))
+    return files
 
 
 @app.get("/info")
 async def api_info() -> JSONResponse:
     """Returns the current time and the number of seconds since the server started."""
+    mp4_files = [f for f in os.listdir(DATA_ROOT) if f.lower().endswith(".mp4")]
     app_data = app_state.to_dict()
     out = {
         "version": VERSION,
@@ -157,7 +168,10 @@ async def api_info() -> JSONResponse:
         "Thread ID": get_current_thread_id(),
         "Number of Views": app_data.get("views", 0),
         "App state": app_data,
-        "DATA_DIR": DATA_DIR,
+        "DATA_ROOT": DATA_ROOT,
+        "Number of MP4 files": len(mp4_files),
+        "MP4 files": mp4_files,
+        "All files": list_all_files(DATA_ROOT),
     }
     return JSONResponse(out)
 
