@@ -118,6 +118,27 @@ async def favicon() -> RedirectResponse:
     return RedirectResponse(url="/www/favicon.ico")
 
 
+@app.get("/info")
+async def api_info() -> JSONResponse:
+    """Returns the current time and the number of seconds since the server started."""
+    mp4_files = [f for f in os.listdir(DATA_ROOT) if f.lower().endswith(".mp4")]
+    app_data = app_state.to_dict()
+    out = {
+        "version": VERSION,
+        "Launched at": str(STARTUP_DATETIME),
+        "Current utc time": str(datetime.datetime.utcnow()),
+        "Process ID": os.getpid(),
+        "Thread ID": get_current_thread_id(),
+        "Number of Views": app_data.get("views", 0),
+        "App state": app_data,
+        "DATA_ROOT": DATA_ROOT,
+        "Number of MP4 files": len(mp4_files),
+        "MP4 files": mp4_files,
+        "All files": list_all_files(DATA_ROOT),
+    }
+    return JSONResponse(out)
+
+
 @app.post("/upload")
 async def upload(  # pylint: disable=too-many-branches
     file: UploadFile = File(...),
@@ -164,26 +185,6 @@ def list_all_files(start_dir: str) -> list[str]:
             files.append(os.path.join(dir_name, filename))
     return files
 
-
-@app.get("/info")
-async def api_info() -> JSONResponse:
-    """Returns the current time and the number of seconds since the server started."""
-    mp4_files = [f for f in os.listdir(DATA_ROOT) if f.lower().endswith(".mp4")]
-    app_data = app_state.to_dict()
-    out = {
-        "version": VERSION,
-        "Launched at": str(STARTUP_DATETIME),
-        "Current utc time": str(datetime.datetime.utcnow()),
-        "Process ID": os.getpid(),
-        "Thread ID": get_current_thread_id(),
-        "Number of Views": app_data.get("views", 0),
-        "App state": app_data,
-        "DATA_ROOT": DATA_ROOT,
-        "Number of MP4 files": len(mp4_files),
-        "MP4 files": mp4_files,
-        "All files": list_all_files(DATA_ROOT),
-    }
-    return JSONResponse(out)
 
 
 def touch(fname):
