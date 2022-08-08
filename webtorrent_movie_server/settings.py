@@ -17,8 +17,7 @@ STUN_SERVERS = os.environ.get(
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(HERE)
-DATA_ROOT = os.environ.get("DATA_ROOT")
-assert DATA_ROOT, f"{__file__}: Environmental variable {DATA_ROOT} is not set"
+DATA_ROOT: str = os.environ.get("DATA_ROOT", os.path.join(HERE, "var", "data"))
 WWW_ROOT = os.path.join(DATA_ROOT, "www")
 VIDEO_ROOT = os.path.join(WWW_ROOT, "v")
 APP_DB = os.path.join(DATA_ROOT, "app.sqlite")
