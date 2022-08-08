@@ -25,6 +25,6 @@ jobs:
     - name: Bootstrap tox
       run: pip install tox
     - name: Install mktorrent
-      run: apt-get install mktorrent
+      run: sudo apt-get install mktorrent
     - name: Tox run lint and then run tests
       run:  tox
