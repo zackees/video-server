@@ -173,7 +173,7 @@ async def api_info() -> JSONResponse:
         "Links": links,
         "Videos": sorted([
             link.replace("/index.html", "") for link in links
-            if link.endswith("/index.html")
+            if link.endswith("/index.html") and "/v/" in link
         ]),
     }
     return JSONResponse(out)
