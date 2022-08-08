@@ -9,8 +9,10 @@ TRACKER_ANNOUNCE_LIST = [
     "wss://webtorrent-tracker.onrender.com",
     "wss://tracker.btorrent.xyz",
 ]
-DOMAIN_NAME = os.environ.get("DOMAIN_NAME", "video-server.onrender.com/www")
+DOMAIN_NAME = os.environ.get("DOMAIN_NAME", "video-server.onrender.com")
 DOMAIN_URL = f"https://{DOMAIN_NAME}"
+DOMAIN_NAME_FILES = f"{DOMAIN_NAME}/www"
+DOMAIN_URL_FILES = f"https://{DOMAIN_NAME_FILES}"
 STUN_SERVERS = os.environ.get(
     "STUN_SERVERS", '"stun:relay.socket.dev:443", "stun:global.stun.twilio.com:3478"'
 )

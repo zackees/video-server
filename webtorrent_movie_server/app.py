@@ -6,18 +6,14 @@ import datetime
 import os
 import shutil
 import threading
+from pathlib import Path
 
-from fastapi import FastAPI, File, UploadFile
+from keyvalue_sqlite import KeyValueSqlite  # type: ignore
+
+from fastapi import FastAPI, File, UploadFile, Header, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from keyvalue_sqlite import KeyValueSqlite  # type: ignore
-
-from pathlib import Path
-from fastapi import FastAPI
-from fastapi import Request, Response
-from fastapi import Header
-from fastapi.templating import Jinja2Templates
 
 
 from webtorrent_movie_server.generate_files import (
@@ -36,6 +32,8 @@ from webtorrent_movie_server.settings import (
     DOMAIN_URL,
 )
 from webtorrent_movie_server.version import VERSION
+
+CHUNK_SIZE = 1024 * 1024
 
 print("Starting fastapi webtorrent movie server")
 
@@ -208,21 +206,20 @@ def touch(fname):
     os.utime(fname, None)
 
 
-
 @app.get("/video")
-async def video_endpoint(name: str, range: str = Header(None)):
-    CHUNK_SIZE = 1024*1024
-    start, end = range.replace("bytes=", "").split("-")
-    start = int(start)
-    end = int(end) if end else start + CHUNK_SIZE
+async def video_endpoint(name: str, byte_range: str = Header(None)):
+    """Video input for streaming file chunks."""
+    _start, _end = byte_range.replace("bytes=", "").split("-")
+    start: int = int(_start)
+    end: int = int(_end) if _end else start + CHUNK_SIZE
     video_path = Path(os.path.join(VIDEO_ROOT, name, "vid.mp4"))
     with open(video_path, "rb") as video:
         video.seek(start)
         data = video.read(end - start)
         filesize = str(video_path.stat().st_size)
         headers = {
-            'Content-Range': f'bytes {str(start)}-{str(end)}/{filesize}',
-            'Accept-Ranges': 'bytes'
+            "Content-Range": f"bytes {str(start)}-{str(end)}/{filesize}",
+            "Accept-Ranges": "bytes",
         }
         return Response(data, status_code=206, headers=headers, media_type="video/mp4")
 
