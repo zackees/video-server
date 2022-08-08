@@ -6,13 +6,12 @@ import datetime
 import os
 import shutil
 import threading
-from pathlib import Path
 
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 
-from fastapi import FastAPI, File, UploadFile, Header, Response
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, FileResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 

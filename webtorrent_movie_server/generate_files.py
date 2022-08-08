@@ -37,6 +37,7 @@ def write_utf8(file: str, contents: str) -> None:
 
 HTML_TEMPLATE = read_utf8(os.path.join(HERE, "template.html"))
 WEBTORRENT_ZACH_MIN_JS = os.path.abspath(os.path.join(HERE, "webtorrent.zach.min.js"))
+REDIRECT_HTML = os.path.join(HERE, "redirect.html")
 assert os.path.exists(WEBTORRENT_ZACH_MIN_JS), f"Missing {WEBTORRENT_ZACH_MIN_JS}"
 
 
@@ -117,6 +118,7 @@ def init_static_files(out_dir: str) -> None:
     assert os.path.exists(out_dir)
     WEBTORRENT_ZACH_MIN_JS_OUT = os.path.join(out_dir, "webtorrent.zach.min.js")
     sync_source_file(WEBTORRENT_ZACH_MIN_JS, WEBTORRENT_ZACH_MIN_JS_OUT)
+    sync_source_file(REDIRECT_HTML, os.path.join(out_dir, "index.html"))
 
 
 def main() -> int:
