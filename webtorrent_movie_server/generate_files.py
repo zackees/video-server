@@ -89,8 +89,8 @@ def create_webtorrent_files(
     # subprocess.check_output(cmd, shell=True)
     os.system(cmd)
     assert os.path.exists(torrent_path), f"Missing expected {torrent_path}"
-    torrent_id = f"{domain_name}/{os.path.basename(torrent_path)}"
-    webseed = f"{domain_name}/content/{os.path.basename(file)}"
+    torrent_id = f"{domain_name}/v/{os.path.basename(torrent_path)}"
+    webseed = f"{domain_name}/v/{os.path.basename(file)}"
     html = HTML_TEMPLATE.replace("__TORRENT_URL__", torrent_id)
     html = html.replace("__WEBSEED__", webseed)
     html = html.replace("__STUN_SERVERS__", stun_servers)
