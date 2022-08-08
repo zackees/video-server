@@ -129,9 +129,12 @@ async def favicon() -> RedirectResponse:
 @app.get("/info")
 async def api_info() -> JSONResponse:
     """Returns the current time and the number of seconds since the server started."""
-    mp4_files = [f for f in os.listdir(DATA_ROOT) if f.lower().endswith(".mp4")]
+    all_files = list_all_files(DATA_ROOT)
+    mp4_files = [f for f in all_files if f.lower().endswith(".mp4")]
     app_data = app_state.to_dict()
     links = [f.replace(WWW_ROOT, DOMAIN_URL) for f in list_all_files(WWW_ROOT)]
+    vid_names = [os.path.basename(os.path.dirname(mp4)) for mp4 in mp4_files]
+    vid_links = [f"{DOMAIN_URL}/video?name={f}" for f in mp4_files]
     out = {
         "version": VERSION,
         "Launched at": str(STARTUP_DATETIME),
@@ -145,6 +148,7 @@ async def api_info() -> JSONResponse:
         "MP4 files": mp4_files,
         "All files": list_all_files(DATA_ROOT),
         "Links": links,
+        "Vid Links": vid_links,
     }
     return JSONResponse(out)
 
@@ -206,12 +210,12 @@ def touch(fname):
 
 
 @app.get("/video")
-async def video_endpoint(video_name: str, range: str = Header(None)):
+async def video_endpoint(name: str, range: str = Header(None)):
     CHUNK_SIZE = 1024*1024
     start, end = range.replace("bytes=", "").split("-")
     start = int(start)
     end = int(end) if end else start + CHUNK_SIZE
-    video_path = os.path.join(VIDEO_ROOT, video_name, "vid.mp4")
+    video_path = Path(os.path.join(VIDEO_ROOT, name, "vid.mp4"))
     with open(video_path, "rb") as video:
         video.seek(start)
         data = video.read(end - start)
