@@ -12,9 +12,11 @@ RUN apt-get update && apt-get install -y --force-yes --no-install-recommends \
     curl
 WORKDIR /app
 RUN pip install --upgrade pip
-# for sending files to other devices
-COPY . .
 RUN pip install magic-wormhole
+# for sending files to other devices
+COPY requirements.txt ./requirements.txt
+RUN pip install -r requirements.txt
+COPY . .
 RUN python -m pip install -e .
 # Expose the port and then launch the app.
 EXPOSE 80
