@@ -10,4 +10,5 @@ This open source video server uses blockchain technology to turn your viewers in
 # TODO:
   * Redis server:
     * https://www.justinsilver.com/technology/node-js-pm2-nginx-redis-centos-7/
-    * https://www.justinsilver.com/technology/node-js-pm2-nginx-redis-centos-7/
+    * https://www.hostinger.com/tutorials/how-to-install-and-setup-redis-on-ubuntu/
+    * https://github.com/redis/redis-py
