@@ -179,7 +179,7 @@ async def api_info() -> JSONResponse:
     return JSONResponse(out)
 
 
-@app.post("/upload", dependencies=[Depends(authorize)])
+@app.post("/upload")
 async def upload(  # pylint: disable=too-many-branches
     file: UploadFile = File(...),
 ) -> PlainTextResponse:
@@ -234,7 +234,7 @@ def touch(fname):
     os.utime(fname, None)
 
 
-@app.delete("/clear", dependencies=[Depends(authorize)])
+@app.delete("/clear")
 async def clear() -> PlainTextResponse:
     """Clears the stored magnet URI."""
     # app_state.clear()
@@ -242,7 +242,7 @@ async def clear() -> PlainTextResponse:
     # touch(os.path.join(ROOT, "restart", "restart.file"))
     shutil.rmtree(VIDEO_ROOT, ignore_errors=True)
     os.makedirs(VIDEO_ROOT, exist_ok=True)
-    return PlainTextResponse(content="Server queued for restart.")
+    return PlainTextResponse(content="Clear ok")
 
 
 print("Starting fastapi webtorrent movie server loaded.")
