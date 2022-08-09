@@ -6,3 +6,8 @@
 
 
 This open source video server uses blockchain technology to turn your viewers into decentralized rebroadcasters. Allows high quality streams at a fraction of the cost.
+
+# TODO:
+  * Redis server:
+    * https://www.justinsilver.com/technology/node-js-pm2-nginx-redis-centos-7/
+    * https://www.justinsilver.com/technology/node-js-pm2-nginx-redis-centos-7/
