@@ -1,0 +1,173 @@
+body {
+  background-color: black;
+}
+
+#play-btn {
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(#65caea 60%, rgb(255 255 255 / 100%) 62%);
+  border-radius: 50%;
+  position: absolute;
+  box-shadow: 0 0 25px 3px #65caea;
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+  z-index: 500;
+  pointer-events: none;
+}
+
+#play-btn.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* triangle */
+#play-btn::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translateX(-40%) translateY(-50%);
+  transform: translateX(-40%) translateY(-50%);
+  transform-origin: center center;
+  width: 0;
+  height: 0;
+  border-top: 15px solid transparent;
+  border-bottom: 15px solid transparent;
+  border-left: 25px solid #fff;
+  z-index: 100;
+  transition: all 400ms cubic-bezier(0.55, 0.055, 0.675, 0.19);
+}
+
+/* pulse wave */
+#play-btn::before {
+  content: "";
+  position: absolute;
+  width: 150%;
+  height: 150%;
+  animation: pulsate1 2s;
+  animation-delay: 0s;
+  animation-direction: forwards;
+  animation-iteration-count: infinite;
+  animation-timing-function: steps;
+  opacity: 1;
+  border-radius: 50%;
+  border: 5px solid rgb(255 255 255 / 75%);
+  top: -30%;
+  left: -30%;
+  background: rgb(198 16 0 / 0%);
+}
+
+@keyframes pulsate1 {
+  0% {
+    transform: scale(0.6);
+    opacity: 1;
+    box-shadow: inset 0 0 25px 3px rgb(255 255 255 / 75%), 0 0 25px 10px rgb(255 255 255 / 75%);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0;
+    box-shadow: none;
+  }
+}
+
+@keyframes pulsate1 {
+  0% {
+    transform: scale(0.6);
+    opacity: 1;
+    box-shadow: inset 0 0 25px 3px rgb(255 255 255 / 75%), 0 0 25px 10px rgb(255 255 255 / 75%);
+  }
+
+  100% {
+    transform: scale(1, 1);
+    transform: scale(1);
+    opacity: 0;
+    box-shadow: none;
+  }
+}
+
+* {
+  margin: 0;
+}
+
+#video-main {
+  opacity: 0;
+}
+
+#video-main.loaded {
+  opacity: 1;
+}
+
+#spinner-container {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 10001;
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+  pointer-events: none;
+}
+
+#spinner-container.active {
+  opacity: 1;
+}
+
+div.spinner {
+  width: 100px;
+  height: 100px;
+  border-radius: 100%;
+  position: absolute;
+  border: 1px solid #65caea;
+  animation: up 1s;
+  animation-iteration-count: infinite;
+  transition: 2s;
+  border-bottom: none;
+  border-right: none;
+  animation-timing-function: linear;
+  left: 0%;
+  top: 0%;
+}
+
+@keyframes up {
+  from {
+    transform: rotate(0deg);
+  }
+
+  50% {
+    transform: rotate(180deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+#spin1 {
+  width: 100px;
+  height: 100px;
+  animation-delay: 0.15s;
+}
+
+#spin2 {
+  width: 90px;
+  height: 90px;
+  animation-delay: 0.2s;
+}
+
+#spin3 {
+  width: 80px;
+  height: 80px;
+  animation-delay: 0.4s;
+}
+
+#spin4 {
+  width: 70px;
+  height: 70px;
+  animation-delay: 0.6s;
+}
+
+#spin5 {
+  width: 60px;
+  height: 60px;
+  animation-delay: 0.8s;
+}

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+
+<!-- Current investigated player
+https://github.com/sampotts/plyr
+-->
+
+<head>
+    <meta charset="UTF-8">
+    <title>Desktop Player</title>
+    <link rel="preload" href="movie.js" as="script">
+    <!--
+  <link rel="stylesheet" type="text/css" href="movie.css">
+  -->
+
+    <link rel="stylesheet" href="movie.css">
+    <style>
+        body {
+            background-color: black;
+        }
+
+    </style>
+</head>
+
+<body>
+    <!-- Note that poster here is a 1x1 black pixel. -->
+
+    <!--
+    https://cdn.plyr.io/3.7.2/plyr.polyfilled.js
+    https://cdn.plyr.io/3.7.2/plyr.css  
+  -->
+    <script src="plyr.min.js"></script>
+    <link rel="stylesheet" href="plyr.min.css" />
+
+
+    <style>
+        body {
+            overflow: hidden;
+            /* Hide scrollbars */
+        }
+
+        /* Remove native button */
+        button.plyr__control--overlaid {
+            display: none !important;
+        }
+
+        :root {
+            --plyr-font-family: 'Open Sans', sans-serif;
+        }
+
+        .plyr__video-wrapper {
+            /*display: none;*/
+            max-height: 100vh;
+        }
+
+        .plyr__controls {}
+
+        .plyr__poster {
+            display: none;
+        }
+
+        .container {
+            margin: 0px;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container>div {
+            width: 100%;
+        }
+
+        .plyr__captions {
+            /*pointer-events: none;*/
+            margin-bottom: 3vh;
+        }
+
+
+        .plyr__caption {
+            /*pointer-events: none;*/
+            font-size: 3vw;
+            background-color: rgba(0, 0, 0, 0);
+            line-height: 1.5;
+
+            /* use bold text */
+            font-family: "Open Sans", sans-serif;
+            color: white;
+            text-shadow: 1px 1px 2px #000, 1px 1px 2px #000, 1px 1px 5px #000, 1px 1px 5px #000, 1px 1px 10px #000, 1px 1px 10px #000, 1px 1px 2px #000, 1px 1px 2px #000, 1px 1px 5px #000, 1px 1px 5px #000, 1px 1px 10px #000, 1px 1px 10px #000;
+        }
+
+    </style>
+
+    <!--button type="button" class="plyr__control plyr__control--overlaid" data-plyr="play" aria-label="Play">
+    <svg aria-hidden="true" focusable="false">
+      <use xlink:href="#plyr-play"></use>
+    </svg>
+    <span class="plyr__sr-only">Play</span>
+  </button-->
+
+
+    <div class="container">
+        <video id="player" preload="metadata">
+            <!--
+
+
+            <source src="https://zbbb278hfll091.bitchute.com/1OjmxN0iuwte/zzYJu1eNdfSN.mp4" type="video/mp4" size="720">
+            <source src="https://zbbb278hfll091.bitchute.com/1OjmxN0iuwte/zzYJu1eNdfSN.mp4" type="video/mp4"
+                size="1080">
+            -->
+            <!-- Caption files 
+            <track label="English" srclang="en" src="demo.vtt" kind="subtitles" default>
+            <track label="External VTT Test" srclang="fr" src="demo2.vtt" kind="subtitles">
+            -->
+        </video>
+    </div>
+    <a id="play-btn" href="#"></a>
+
+    <div id="spinner-container">
+        <div class="spinner" id="spin1"></div>
+        <div class="spinner" id="spin2"></div>
+        <div class="spinner" id="spin3"></div>
+        <div class="spinner" id="spin4"></div>
+        <div class="spinner" id="spin5"></div>
+    </div>
+    <script src="movie.js"></script>
+    <script>
+        fetch("../video.json", { method: 'GET' })
+            .then((response) => {
+                response.json().then((data) => {
+                    $player = document.getElementById("player");
+                    for (const size in data.desktop) {
+                        $sourceElement = document.createElement('source');
+                        const src = data.desktop[size];
+                        $sourceElement.setAttribute('src', src);
+                        $sourceElement.setAttribute('type', 'video/mp4');
+                        $sourceElement.setAttribute('size', size);
+                        $player.appendChild($sourceElement);
+                    }
+                    let isFirst = true
+                    for (const subtitle of data.subtitles) {
+                        // console.log("subtitles:", subtitle);
+                        $sourceElement = document.createElement('track');
+                        // Get the current url
+                        const url = new URL(window.location.href);
+                        // Go up one directory
+                        let href = url.href
+                        href = href.replace("/index.html", "")
+                        if (href.endsWith("/")) {
+                            href = href.substring(0, href.length - 1)
+                        }
+                        const baseUrl = href.substring(0, href.lastIndexOf("/"))
+                        // Combine the url and the subtitle file, going up one directory.
+                        const src = baseUrl + "/subtitles/" + subtitle.file;
+                        $sourceElement.setAttribute('label', subtitle.label);
+                        $sourceElement.setAttribute('srclang', subtitle.srclang);
+                        $sourceElement.setAttribute('src', src);
+                        $sourceElement.setAttribute('kind', 'subtitles');
+                        if (isFirst) {
+                            $sourceElement.setAttribute('default', '');
+                            isFirst = false;
+                        }
+                        $player.appendChild($sourceElement);
+                    }
+                    // Change the second argument to your options:
+                    // https://github.com/sampotts/plyr/#options
+                    // Expose player so it can be used from the console
+                    globalThis.player = new Plyr('video', { captions: { active: true } });
+                })
+            })
+            .catch((error) => {
+                console.log("error", error)
+            });
+    </script>
+</body>
+
+</html>

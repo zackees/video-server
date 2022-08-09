@@ -1,0 +1,55 @@
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Video.js Sandbox</title>
+
+    <!--
+    <script src="https://videojs-preview.netlify.app/dist/video.js"></script>
+    <link href="https://unpkg.com/video.js@7/dist/video-js.min.css" rel="stylesheet">
+  -->
+    <link rel="preload" href="video.js" as="script">
+    <link href="video-js.min.css" rel="stylesheet">
+</head>
+
+
+<body>
+
+    <style>
+        .vid1-dimensions {
+            margin: 0px !important;
+            width: 100vw !important;
+            height: 100vh !important;
+        }
+
+        .video-js {
+            margin: 0px !important;
+            width: 100vw !important;
+            height: 100vh !important;
+        }
+
+        /* disable scroll bars */
+        body {
+            overflow: hidden;
+            margin: 0px;
+            /* set the font face globally to arial */
+            font-family: Arial, Helvetica, sans-serif !important;
+        }
+
+        button.vjs-big-play-button {
+            /*display: none !important;*/
+        }
+
+    </style>
+
+    <video id="vid1" controls preload="metadata" class="video-js vjs-big-play-centered vjs-big-play-button">
+        <source id="video-source" type="video/mp4">
+        <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that
+            <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a></p>
+    </video>
+</body>
+
+<script src="video.min.js"></script>
+<script src="index.js"></script>
+
+</html>
