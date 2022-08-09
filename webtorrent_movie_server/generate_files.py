@@ -13,6 +13,7 @@ import os
 import shutil
 from typing import List, Tuple
 import time
+import json
 from webtorrent_movie_server.settings import (
     DOMAIN_NAME,
     STUN_SERVERS,
@@ -58,12 +59,39 @@ def get_files(out_dir: str) -> Tuple[str, str, str]:  # pylint: disable=too-many
     html_path = os.path.join(out_dir, "index.html")
     return md5file, torrent_path, html_path
 
+def generate_video_json(torrentfile: str, mp4file: str) -> str:
+    data = {
+        "note": "This is a sample and should be overriden during the video creation process",
+        "webtorrent": {
+            "torrent": "https://webtorrent-webseed.onrender.com/indoctrination.mp4.torrent",
+            "webseed": "https://webtorrent-webseed.onrender.com/content/indoctrination.mp4"
+        },
+        "desktop": {
+            "720": "https://webtorrent-webseed.onrender.com/content/indoctrination.mp4"
+        },
+        "mobile": "https://webtorrent-webseed.onrender.com/content/indoctrination.mp4",
+        "subtitles": [ 
+            { "file": "en.vtt", "srclang": "en", "label": "English" },
+            { "file": "es.vtt", "srclang": "es", "label": "Español" }
+        ],
+        "todo": "Let's also have bitchute: <URL> and rumble <URL>"
+    }
+    data["webtorrent"]["torrent"] = torrentfile
+    data["webtorrent"]["webseed"] = mp4file
+    data["desktop"]["720"] = mp4file
+    data["mobile"] = mp4file
+    # TODO: figure out subtitle logic. For now just disable.
+    if True:
+        data["subtitles"] = []
+    return data
+
+
 
 def create_webtorrent_files(
     file: str,
     domain_name: str,
     tracker_announce_list: List[str],
-    stun_servers: str,
+    stun_servers: str,  # pylint: disable=unused-argument
     out_dir: str,
     chunk_factor: int = 17,
 ) -> Tuple[str, str]:
@@ -92,18 +120,17 @@ def create_webtorrent_files(
     os.system(cmd)
     vid_name = os.path.basename(os.path.dirname(file))
     assert os.path.exists(torrent_path), f"Missing expected {torrent_path}"
-    #http_type = "http" if "localhost" in domain_name else "https"
-    #torrent_id = f"{http_type}://{domain_name}/v/{vid_name}/index.torrent"
-    #webseed = f"{http_type}://{domain_name}/v/{vid_name}/vid.mp4"
+    http_type = "http" if "localhost" in domain_name else "https"
+    torrent_url = f"{http_type}://{domain_name}/v/{vid_name}/index.torrent"
+    webseed = f"{http_type}://{domain_name}/v/{vid_name}/vid.mp4"
     #html = HTML_TEMPLATE.replace("__TORRENT_URL__", torrent_id)
     #html = html.replace("__WEBSEED__", webseed)
     #html = html.replace("__STUN_SERVERS__", stun_servers)
     #write_utf8(html_path, contents=html)
-
     shutil.copytree(PLAYER_DIR, out_dir, dirs_exist_ok=True)
-    # video_json_file = os.path.join(out_dir, "video.json")
-
-
+    dict_data = generate_video_json(torrentfile=torrent_url, mp4file=webseed)
+    json_data = json.dumps(dict_data, indent=4)
+    write_utf8(os.path.join(out_dir, "video.json"), contents=json_data)
     assert os.path.exists(html_path), f"Missing {html_path}"
     return (html_path, torrent_path)
 
