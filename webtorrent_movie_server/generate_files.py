@@ -21,6 +21,7 @@ from webtorrent_movie_server.settings import (
 
 # WORK IN PROGRESS
 HERE = os.path.dirname(os.path.abspath(__file__))
+PLAYER_DIR = os.path.join(HERE, "player")
 
 
 def read_utf8(file: str) -> str:
@@ -91,13 +92,18 @@ def create_webtorrent_files(
     os.system(cmd)
     vid_name = os.path.basename(os.path.dirname(file))
     assert os.path.exists(torrent_path), f"Missing expected {torrent_path}"
-    http_type = "http" if "localhost" in domain_name else "https"
-    torrent_id = f"{http_type}://{domain_name}/v/{vid_name}/index.torrent"
-    webseed = f"{http_type}://{domain_name}/v/{vid_name}/vid.mp4"
-    html = HTML_TEMPLATE.replace("__TORRENT_URL__", torrent_id)
-    html = html.replace("__WEBSEED__", webseed)
-    html = html.replace("__STUN_SERVERS__", stun_servers)
-    write_utf8(html_path, contents=html)
+    #http_type = "http" if "localhost" in domain_name else "https"
+    #torrent_id = f"{http_type}://{domain_name}/v/{vid_name}/index.torrent"
+    #webseed = f"{http_type}://{domain_name}/v/{vid_name}/vid.mp4"
+    #html = HTML_TEMPLATE.replace("__TORRENT_URL__", torrent_id)
+    #html = html.replace("__WEBSEED__", webseed)
+    #html = html.replace("__STUN_SERVERS__", stun_servers)
+    #write_utf8(html_path, contents=html)
+
+    shutil.copytree(PLAYER_DIR, out_dir, dirs_exist_ok=True)
+    # video_json_file = os.path.join(out_dir, "video.json")
+
+
     assert os.path.exists(html_path), f"Missing {html_path}"
     return (html_path, torrent_path)
 
