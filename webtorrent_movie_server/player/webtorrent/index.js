@@ -128,9 +128,7 @@ function initWebtorrent(data) {
         }
     }
 
-
     let jobAddWebseed = setTimeout(addWebSeed, 10000)
-
 
     torrent.on('download', (a) => {
         // console.log(`download: ${a}`)
@@ -142,7 +140,8 @@ function initWebtorrent(data) {
         printDownloaded()
         // Defer adding the webseed because we have uninterrupted download.
         clearInterval(jobAddWebseed)
-        jobAddWebseed = setTimeout(addWebSeed, 5000)
+        const timeout = webtorrentOptions.aggressive ? 0 : 5000
+        jobAddWebseed = setTimeout(addWebSeed, timeout)
     })
     // torrent.on('upload', (a) => { console.log(`upload: ${a}`) })
 
