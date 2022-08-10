@@ -91,6 +91,7 @@ function initWebtorrent(data) {
 
     function addWebSeed() {
         if (!webseedAdded) {
+            console.log('adding webseed')
             torrent.addWebSeed(WEBSEED)
             webseedAdded = true
         }
@@ -140,8 +141,7 @@ function initWebtorrent(data) {
         printDownloaded()
         // Defer adding the webseed because we have uninterrupted download.
         clearInterval(jobAddWebseed)
-        const timeout = webtorrentOptions.aggressive ? 0 : 5000
-        jobAddWebseed = setTimeout(addWebSeed, timeout)
+        jobAddWebseed = setTimeout(addWebSeed, 5000)
     })
     // torrent.on('upload', (a) => { console.log(`upload: ${a}`) })
 
@@ -158,20 +158,25 @@ function initWebtorrent(data) {
         console.log('torrent ready')
 
         // Warning! This relies on patched webtorrent ICECOMPLETE_TIMEOUT=1000
-        setTimeout(() => {
-            if (downloadedBytes === 0 && !webseedAdded) {
-                console.log('Adding webseed because client choked for 7 seconds.')
-                addWebSeed()
-            }
-        }, 7000)
-
-        setTimeout(() => {
-            const oneMegaByte = 1024 * 512
-            if (downloadedBytes < oneMegaByte && !webseedAdded) {
-                console.log('Adding webseed because client could download fast enough after 10 seconds.')
-                addWebSeed()
-            }
-        }, 12000)
+        // if aggressive
+        if (webtorrentOptions.aggressive) {
+            addWebSeed()
+        } else {
+            setTimeout(() => {
+                if (downloadedBytes === 0 && !webseedAdded) {
+                    console.log('Adding webseed because client choked for 7 seconds.')
+                    addWebSeed()
+                }
+            }, 7000)
+    
+            setTimeout(() => {
+                const oneMegaByte = 1024 * 512
+                if (downloadedBytes < oneMegaByte && !webseedAdded) {
+                    console.log('Adding webseed because client could download fast enough after 10 seconds.')
+                    addWebSeed()
+                }
+            }, 12000)
+        }
 
         //document.getElementById('info').innerHTML = 'Movie name: ' + torrent.name
         console.log('Torrent loaded!')
