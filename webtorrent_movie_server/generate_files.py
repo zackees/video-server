@@ -67,6 +67,7 @@ def generate_video_json(torrentfile: str, mp4file: str) -> dict[str, Any]:
         "webtorrent": {
             "torrent": "https://webtorrent-webseed.onrender.com/indoctrination.mp4.torrent",
             "webseed": "https://webtorrent-webseed.onrender.com/content/indoctrination.mp4",
+            "aggressive": True,
         },
         "desktop": {
             "720": "https://webtorrent-webseed.onrender.com/content/indoctrination.mp4"
