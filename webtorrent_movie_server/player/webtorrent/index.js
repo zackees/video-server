@@ -5,6 +5,8 @@
 function initWebtorrent(data) {
     // Enable WebTorrent debugging for now.
     globalThis.localStorage.debug = '*'
+    // Black pixel.
+    const poster = data.poster || "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjYGBk/A8AAQkBAubzvZ0AAAAASUVORK5CYII="
     const webtorrentOptions = data.webtorrent
     const ICE_CONFIGURATION = {
         iceServers: [
@@ -93,6 +95,15 @@ function initWebtorrent(data) {
         }
     }
 
+    const jobId = setInterval(() => {
+        const $vid = document.querySelector('video')
+        if (!$vid) {
+            return
+        }
+        clearInterval(jobId)
+        $vid.poster = poster
+    }, 0);
+
     function onVideoLoaded(data) {
         console.log('onVideoLoaded')
         // console.log(document.querySelector("div.container>video"))
@@ -153,8 +164,6 @@ function initWebtorrent(data) {
 
         // Warning! This relies on patched webtorrent ICECOMPLETE_TIMEOUT=1000
         // if aggressive
-        console.log("webtorrentOptions", webtorrentOptions)
-        console.log("webtorrentOptions.aggressive:", webtorrentOptions.aggressive)
         if (webtorrentOptions.aggressive) {
             console.log("Adding webseed because aggressive mode")
             addWebSeed()
