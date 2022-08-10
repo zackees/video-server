@@ -188,16 +188,28 @@ def query_videos() -> List[str]:
 @app.get("/list_videos")
 async def regenerate() -> JSONResponse:
     """Uploads a file to the server."""
-    return JSONResponse(content=query_videos())
+    videos = query_videos()
+    # video_paths = [os.path.join(VIDEO_ROOT, video) for video in videos]
+    if "localhost" in DOMAIN_NAME:
+        domain_url = f"http://{DOMAIN_NAME}"
+    else:
+        domain_url = f"https://{DOMAIN_NAME}"
+    video_urls = [ f"{domain_url}/v/{video}" for video in videos]
+    return JSONResponse(content=video_urls)
 
 
 @app.get("/list_all_files")
 def list_all_files() -> JSONResponse:
     """List all files in a directory."""
+    if "localhost" in DOMAIN_NAME:
+        domain_url = f"http://{DOMAIN_NAME}"
+    else:
+        domain_url = f"https://{DOMAIN_NAME}"
+    
     files = []
     for dir_name, _, file_list in os.walk(WWW_ROOT):
         for filename in file_list:
-            files.append(os.path.join(dir_name, filename))
+            files.append(f"{domain_url}/{dir_name}/{filename}")
     return JSONResponse(files)
 
 
@@ -254,7 +266,7 @@ def video_path(video: str) -> str:
 
 @app.patch("/regenerate")
 def regenerate() -> JSONResponse:
-    """List all files in a directory."""
+    """Regenerate the files."""
     vid_files = [video_path(v) for v in query_videos()]
     for vidf in vid_files:
         create_webtorrent_files(
