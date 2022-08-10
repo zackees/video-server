@@ -18,9 +18,9 @@ class GenerateFilesTester(unittest.TestCase):
         """Opens up the server and tests that the version returned is correct."""
         actual = get_files(out_dir="out")
         if sys.platform == "win32":
-            expected = ('out\\index.md5', 'out\\index.torrent', 'out\\index.html')
+            expected = ('out\\index.torrent', 'out\\index.html')
         else:
-            expected = ('out/index.md5', 'out/index.torrent', 'out/index.html')
+            expected = ('out/index.torrent', 'out/index.html')
         self.assertEqual(expected, actual)
 
     @unittest.skipIf(sys.platform == "win32", "Not supported on Windows")

@@ -158,7 +158,7 @@ async def api_info() -> JSONResponse:
     else:
         domain_url = f"https://{DOMAIN_NAME}"
     videos = sorted(query_videos())
-    links = [ f"{domain_url}/v/{video}" for video in videos]
+    links = [f"{domain_url}/v/{video}" for video in videos]
     out = {
         "version": VERSION,
         "Launched at": str(STARTUP_DATETIME),
@@ -179,14 +179,15 @@ async def api_info() -> JSONResponse:
 
 
 def query_videos() -> List[str]:
+    """Returns a list of videos in the video directory."""
     videos = [
-        d for d in os.listdir(VIDEO_ROOT)
-        if os.path.isdir(os.path.join(VIDEO_ROOT, d))
+        d for d in os.listdir(VIDEO_ROOT) if os.path.isdir(os.path.join(VIDEO_ROOT, d))
     ]
     return sorted(videos)
 
+
 @app.get("/list_videos")
-async def regenerate() -> JSONResponse:
+async def list_videos() -> JSONResponse:
     """Uploads a file to the server."""
     videos = query_videos()
     # video_paths = [os.path.join(VIDEO_ROOT, video) for video in videos]
@@ -194,7 +195,7 @@ async def regenerate() -> JSONResponse:
         domain_url = f"http://{DOMAIN_NAME}"
     else:
         domain_url = f"https://{DOMAIN_NAME}"
-    video_urls = [ f"{domain_url}/v/{video}" for video in videos]
+    video_urls = [f"{domain_url}/v/{video}" for video in videos]
     return JSONResponse(content=video_urls)
 
 
@@ -205,14 +206,12 @@ def list_all_files() -> JSONResponse:
         domain_url = f"http://{DOMAIN_NAME}"
     else:
         domain_url = f"https://{DOMAIN_NAME}"
-    
+
     files = []
     for dir_name, _, file_list in os.walk(WWW_ROOT):
         for filename in file_list:
             files.append(f"{domain_url}/{dir_name}/{filename}")
     return JSONResponse(files)
-
-
 
 
 def touch(fname):
@@ -260,9 +259,11 @@ async def upload(  # pylint: disable=too-many-branches
     )
     return PlainTextResponse(content=f"wrote file okay at location: {final_path}")
 
+
 def video_path(video: str) -> str:
     """Returns the path to the video."""
     return os.path.join(VIDEO_ROOT, video, "vid.mp4")
+
 
 @app.patch("/regenerate")
 def regenerate() -> JSONResponse:

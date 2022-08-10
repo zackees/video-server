@@ -15,6 +15,7 @@ import shutil
 from typing import List, Tuple, Any
 import time
 import json
+from distutils.dir_util import copy_tree  # pylint: disable=deprecated-module
 from webtorrent_movie_server.settings import (
     DOMAIN_NAME,
     STUN_SERVERS,
@@ -57,7 +58,7 @@ def get_files(out_dir: str) -> Tuple[str, str]:  # pylint: disable=too-many-loca
     """Gets all the artificate names from the source file."""
     torrent_path = os.path.join(out_dir, "index.torrent")
     html_path = os.path.join(out_dir, "index.html")
-    return  torrent_path, html_path
+    return torrent_path, html_path
 
 
 def generate_video_json(torrentfile: str, mp4file: str) -> dict[str, Any]:
@@ -117,7 +118,7 @@ def create_webtorrent_files(
     http_type = "http" if "localhost" in domain_name else "https"
     torrent_url = f"{http_type}://{domain_name}/v/{vid_name}/index.torrent"
     webseed = f"{http_type}://{domain_name}/v/{vid_name}/vid.mp4"
-    shutil.copytree(PLAYER_DIR, out_dir, dirs_exist_ok=True)
+    copy_tree(PLAYER_DIR, out_dir)
     dict_data = generate_video_json(torrentfile=torrent_url, mp4file=webseed)
     json_data = json.dumps(dict_data, indent=4)
     write_utf8(os.path.join(out_dir, "video.json"), contents=json_data)

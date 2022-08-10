@@ -153,6 +153,7 @@ function initWebtorrent(data) {
 
         // Warning! This relies on patched webtorrent ICECOMPLETE_TIMEOUT=1000
         // if aggressive
+        console.log("webtorrentOptions", webtorrentOptions)
         console.log("webtorrentOptions.aggressive:", webtorrentOptions.aggressive)
         if (webtorrentOptions.aggressive) {
             console.log("Adding webseed because aggressive mode")
@@ -164,7 +165,7 @@ function initWebtorrent(data) {
                     addWebSeed()
                 }
             }, 7000)
-    
+
             setTimeout(() => {
                 const oneMegaByte = 1024 * 512
                 if (downloadedBytes < oneMegaByte && !webseedAdded) {
