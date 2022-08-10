@@ -53,12 +53,11 @@ def filemd5(filename):
     return d.hexdigest()
 
 
-def get_files(out_dir: str) -> Tuple[str, str, str]:  # pylint: disable=too-many-locals
+def get_files(out_dir: str) -> Tuple[str, str]:  # pylint: disable=too-many-locals
     """Gets all the artificate names from the source file."""
-    md5file = os.path.join(out_dir, "index.md5")
     torrent_path = os.path.join(out_dir, "index.torrent")
     html_path = os.path.join(out_dir, "index.html")
-    return md5file, torrent_path, html_path
+    return  torrent_path, html_path
 
 
 def generate_video_json(torrentfile: str, mp4file: str) -> dict[str, Any]:
@@ -90,7 +89,7 @@ def generate_video_json(torrentfile: str, mp4file: str) -> dict[str, Any]:
 
 
 def create_webtorrent_files(
-    file: str,
+    vidfile: str,
     domain_name: str,
     tracker_announce_list: List[str],
     stun_servers: str,  # pylint: disable=unused-argument
@@ -100,15 +99,7 @@ def create_webtorrent_files(
     """Generates the webtorrent files for a given video file."""
     assert tracker_announce_list
     os.makedirs(out_dir, exist_ok=True)
-    md5file, torrent_path, html_path = get_files(out_dir=out_dir)
-    # Generate the md5 file
-    md5 = filemd5(file)
-    if not os.path.exists(md5file) or md5 != read_utf8(md5file):
-        print(f"MD5 mismatch for {file}")
-        for f in [md5file, torrent_path, html_path]:
-            if os.path.exists(f):
-                os.remove(f)
-        write_utf8(md5file, contents=md5)
+    torrent_path, html_path = get_files(out_dir=out_dir)
     if os.path.exists(torrent_path):
         os.remove(torrent_path)
     # Use which to detect whether the mktorrent binary is available.
@@ -116,19 +107,15 @@ def create_webtorrent_files(
         raise OSError("mktorrent not found")
     tracker_announce = "-a " + " -a ".join(tracker_announce_list)
     # print(os.environ['path'])
-    cmd = f'mktorrent "{file}" {tracker_announce} -l {chunk_factor} -o "{torrent_path}"'
+    cmd = f'mktorrent "{vidfile}" {tracker_announce} -l {chunk_factor} -o "{torrent_path}"'
     print(f"Running\n    {cmd}")
     # subprocess.check_output(cmd, shell=True)
     os.system(cmd)
-    vid_name = os.path.basename(os.path.dirname(file))
+    vid_name = os.path.basename(os.path.dirname(vidfile))
     assert os.path.exists(torrent_path), f"Missing expected {torrent_path}"
     http_type = "http" if "localhost" in domain_name else "https"
     torrent_url = f"{http_type}://{domain_name}/v/{vid_name}/index.torrent"
     webseed = f"{http_type}://{domain_name}/v/{vid_name}/vid.mp4"
-    # html = HTML_TEMPLATE.replace("__TORRENT_URL__", torrent_id)
-    # html = html.replace("__WEBSEED__", webseed)
-    # html = html.replace("__STUN_SERVERS__", stun_servers)
-    # write_utf8(html_path, contents=html)
     shutil.copytree(PLAYER_DIR, out_dir, dirs_exist_ok=True)
     dict_data = generate_video_json(torrentfile=torrent_url, mp4file=webseed)
     json_data = json.dumps(dict_data, indent=4)

@@ -5,11 +5,7 @@
 function initWebtorrent(data) {
     // Enable WebTorrent debugging for now.
     globalThis.localStorage.debug = '*'
-
     const webtorrentOptions = data.webtorrent
-
-
-
     const ICE_CONFIGURATION = {
         iceServers: [
             {
@@ -128,9 +124,7 @@ function initWebtorrent(data) {
             $vid.appendChild($sourceElement);
         }
     }
-
     let jobAddWebseed = setTimeout(addWebSeed, 10000)
-
     torrent.on('download', (a) => {
         // console.log(`download: ${a}`)
         if (downloadedBytes === 0) {
@@ -159,7 +153,9 @@ function initWebtorrent(data) {
 
         // Warning! This relies on patched webtorrent ICECOMPLETE_TIMEOUT=1000
         // if aggressive
+        console.log("webtorrentOptions.aggressive:", webtorrentOptions.aggressive)
         if (webtorrentOptions.aggressive) {
+            console.log("Adding webseed because aggressive mode")
             addWebSeed()
         } else {
             setTimeout(() => {

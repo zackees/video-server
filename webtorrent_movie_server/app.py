@@ -6,6 +6,7 @@ import datetime
 import os
 import shutil
 import threading
+from typing import List
 
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 
@@ -151,14 +152,13 @@ async def favicon() -> RedirectResponse:
 @app.get("/info")
 async def api_info() -> JSONResponse:
     """Returns the current time and the number of seconds since the server started."""
-    all_files = list_all_files(DATA_ROOT)
-    mp4_files = [f for f in all_files if f.lower().endswith(".mp4")]
     app_data = app_state.to_dict()
     if "localhost" in DOMAIN_NAME:
         domain_url = f"http://{DOMAIN_NAME}"
     else:
         domain_url = f"https://{DOMAIN_NAME}"
-    links = [f.replace(WWW_ROOT, domain_url) for f in list_all_files(WWW_ROOT)]
+    videos = sorted(query_videos())
+    links = [ f"{domain_url}/v/{video}" for video in videos]
     out = {
         "version": VERSION,
         "Launched at": str(STARTUP_DATETIME),
@@ -172,19 +172,43 @@ async def api_info() -> JSONResponse:
         "WWW_ROOT": WWW_ROOT,
         "VIDEO_ROOT": VIDEO_ROOT,
         "LOGFILE": LOGFILE,
-        "Number of MP4 files": len(mp4_files),
-        "MP4 files": mp4_files,
-        "All files": list_all_files(DATA_ROOT),
         "Links": links,
-        "Videos": sorted(
-            [
-                link.replace("/index.html", "")
-                for link in links
-                if link.endswith("/index.html") and "/v/" in link
-            ]
-        ),
+        "Videos": videos,
     }
     return JSONResponse(out)
+
+
+def query_videos() -> List[str]:
+    videos = [
+        d for d in os.listdir(VIDEO_ROOT)
+        if os.path.isdir(os.path.join(VIDEO_ROOT, d))
+    ]
+    return sorted(videos)
+
+@app.get("/list_videos")
+async def regenerate() -> JSONResponse:
+    """Uploads a file to the server."""
+    return JSONResponse(content=query_videos())
+
+
+@app.get("/list_all_files")
+def list_all_files() -> JSONResponse:
+    """List all files in a directory."""
+    files = []
+    for dir_name, _, file_list in os.walk(WWW_ROOT):
+        for filename in file_list:
+            files.append(os.path.join(dir_name, filename))
+    return JSONResponse(files)
+
+
+
+
+def touch(fname):
+    """Touches file"""
+    open(  # pylint: disable=consider-using-with
+        fname, encoding="utf-8", mode="a"
+    ).close()
+    os.utime(fname, None)
 
 
 @app.post("/upload")
@@ -216,7 +240,7 @@ async def upload(  # pylint: disable=too-many-branches
     # TODO: Final check, use ffprobe to check if it is a valid mp4 file that can be  # pylint: disable=fixme
     # streamed.
     create_webtorrent_files(
-        file=final_path,
+        vidfile=final_path,
         domain_name=DOMAIN_NAME,
         tracker_announce_list=TRACKER_ANNOUNCE_LIST,
         stun_servers=STUN_SERVERS,
@@ -224,22 +248,23 @@ async def upload(  # pylint: disable=too-many-branches
     )
     return PlainTextResponse(content=f"wrote file okay at location: {final_path}")
 
+def video_path(video: str) -> str:
+    """Returns the path to the video."""
+    return os.path.join(VIDEO_ROOT, video, "vid.mp4")
 
-def list_all_files(start_dir: str) -> list[str]:
+@app.patch("/regenerate")
+def regenerate() -> JSONResponse:
     """List all files in a directory."""
-    files = []
-    for dir_name, _, file_list in os.walk(start_dir):
-        for filename in file_list:
-            files.append(os.path.join(dir_name, filename))
-    return files
-
-
-def touch(fname):
-    """Touches file"""
-    open(  # pylint: disable=consider-using-with
-        fname, encoding="utf-8", mode="a"
-    ).close()
-    os.utime(fname, None)
+    vid_files = [video_path(v) for v in query_videos()]
+    for vidf in vid_files:
+        create_webtorrent_files(
+            vidfile=vidf,
+            domain_name=DOMAIN_NAME,
+            tracker_announce_list=TRACKER_ANNOUNCE_LIST,
+            stun_servers=STUN_SERVERS,
+            out_dir=os.path.dirname(vidf),
+        )
+    return JSONResponse(content=vid_files)
 
 
 @app.delete("/clear")
