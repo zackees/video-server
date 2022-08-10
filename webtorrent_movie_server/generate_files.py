@@ -7,11 +7,12 @@ Generates webtorrent files.
 # pylint: disable=too-many-arguments
 # pylint: disable=too-many-locals
 # pylint: disable=unnecessary-lambda
+# pylint: disable=fixme
 import sys
 import hashlib
 import os
 import shutil
-from typing import List, Tuple
+from typing import List, Tuple, Any
 import time
 import json
 from webtorrent_movie_server.settings import (
@@ -59,32 +60,33 @@ def get_files(out_dir: str) -> Tuple[str, str, str]:  # pylint: disable=too-many
     html_path = os.path.join(out_dir, "index.html")
     return md5file, torrent_path, html_path
 
-def generate_video_json(torrentfile: str, mp4file: str) -> str:
+
+def generate_video_json(torrentfile: str, mp4file: str) -> dict[str, Any]:
+    """Generates the video json for the webtorrent player."""
     data = {
         "note": "This is a sample and should be overriden during the video creation process",
         "webtorrent": {
             "torrent": "https://webtorrent-webseed.onrender.com/indoctrination.mp4.torrent",
-            "webseed": "https://webtorrent-webseed.onrender.com/content/indoctrination.mp4"
+            "webseed": "https://webtorrent-webseed.onrender.com/content/indoctrination.mp4",
         },
         "desktop": {
             "720": "https://webtorrent-webseed.onrender.com/content/indoctrination.mp4"
         },
         "mobile": "https://webtorrent-webseed.onrender.com/content/indoctrination.mp4",
-        "subtitles": [ 
-            { "file": "en.vtt", "srclang": "en", "label": "English" },
-            { "file": "es.vtt", "srclang": "es", "label": "Español" }
+        "subtitles": [
+            {"file": "en.vtt", "srclang": "en", "label": "English"},
+            {"file": "es.vtt", "srclang": "es", "label": "Español"},
         ],
-        "todo": "Let's also have bitchute: <URL> and rumble <URL>"
+        "todo": "Let's also have bitchute: <URL> and rumble <URL>",
     }
-    data["webtorrent"]["torrent"] = torrentfile
-    data["webtorrent"]["webseed"] = mp4file
-    data["desktop"]["720"] = mp4file
-    data["mobile"] = mp4file
+    data["webtorrent"]["torrent"] = torrentfile  # type: ignore
+    data["webtorrent"]["webseed"] = mp4file  # type: ignore
+    data["desktop"]["720"] = mp4file  # type: ignore
+    data["mobile"] = mp4file  # type: ignore
     # TODO: figure out subtitle logic. For now just disable.
-    if True:
-        data["subtitles"] = []
+    if True:  # pylint: disable=using-constant-test
+        data["subtitles"] = []  # type: ignore
     return data
-
 
 
 def create_webtorrent_files(
@@ -123,10 +125,10 @@ def create_webtorrent_files(
     http_type = "http" if "localhost" in domain_name else "https"
     torrent_url = f"{http_type}://{domain_name}/v/{vid_name}/index.torrent"
     webseed = f"{http_type}://{domain_name}/v/{vid_name}/vid.mp4"
-    #html = HTML_TEMPLATE.replace("__TORRENT_URL__", torrent_id)
-    #html = html.replace("__WEBSEED__", webseed)
-    #html = html.replace("__STUN_SERVERS__", stun_servers)
-    #write_utf8(html_path, contents=html)
+    # html = HTML_TEMPLATE.replace("__TORRENT_URL__", torrent_id)
+    # html = html.replace("__WEBSEED__", webseed)
+    # html = html.replace("__STUN_SERVERS__", stun_servers)
+    # write_utf8(html_path, contents=html)
     shutil.copytree(PLAYER_DIR, out_dir, dirs_exist_ok=True)
     dict_data = generate_video_json(torrentfile=torrent_url, mp4file=webseed)
     json_data = json.dumps(dict_data, indent=4)

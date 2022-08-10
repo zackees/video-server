@@ -79,15 +79,20 @@ def get_current_thread_id() -> int:
 
 def authorize(credentials: HTTPBasicCredentials = Depends(security)):
     """Authorize the user."""
-    is_user_ok = secrets.compare_digest(credentials.username, os.getenv('LOGIN', 'LOGIN'))
-    is_pass_ok = secrets.compare_digest(credentials.password, os.getenv('PASSWORD', 'PASSWORD'))
+    is_user_ok = secrets.compare_digest(
+        credentials.username, os.getenv("LOGIN", "LOGIN")
+    )
+    is_pass_ok = secrets.compare_digest(
+        credentials.password, os.getenv("PASSWORD", "PASSWORD")
+    )
 
     if not (is_user_ok and is_pass_ok):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Incorrect email or password.',
-            headers={'WWW-Authenticate': 'Basic'},
+            detail="Incorrect email or password.",
+            headers={"WWW-Authenticate": "Basic"},
         )
+
 
 # @app.get('/api/access/auth', dependencies=[Depends(authorize)])
 # def auth():
@@ -171,10 +176,13 @@ async def api_info() -> JSONResponse:
         "MP4 files": mp4_files,
         "All files": list_all_files(DATA_ROOT),
         "Links": links,
-        "Videos": sorted([
-            link.replace("/index.html", "") for link in links
-            if link.endswith("/index.html") and "/v/" in link
-        ]),
+        "Videos": sorted(
+            [
+                link.replace("/index.html", "")
+                for link in links
+                if link.endswith("/index.html") and "/v/" in link
+            ]
+        ),
     }
     return JSONResponse(out)
 
