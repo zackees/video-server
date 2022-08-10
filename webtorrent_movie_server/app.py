@@ -187,7 +187,7 @@ def query_videos() -> List[str]:
 
 
 @app.get("/videos")
-async def list_videos() -> HTMLResponse:
+async def list_videos() -> PlainTextResponse:
     """Uploads a file to the server."""
     videos = query_videos()
     # video_paths = [os.path.join(VIDEO_ROOT, video) for video in videos]
@@ -195,12 +195,10 @@ async def list_videos() -> HTMLResponse:
         domain_url = f"http://{DOMAIN_NAME}"
     else:
         domain_url = f"https://{DOMAIN_NAME}"
-    html_str = f"""<html><body><h1>Videos</h1>
-    <ul>
-    {''.join(f"<li><a href='{domain_url}/v/{video}'>{video}</a></li>" for video in videos)}
-    </ul>
-    </body></html>"""
-    return HTMLResponse(content=html_str)
+    vid_urls = [
+        f"{domain_url}/v/{video}" for video in videos
+    ]
+    return PlainTextResponse(content="\n".join(vid_urls))
 
 
 @app.get("/list_all_files")
