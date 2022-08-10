@@ -12,7 +12,7 @@ from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 
 from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
@@ -186,8 +186,8 @@ def query_videos() -> List[str]:
     return sorted(videos)
 
 
-@app.get("/list_videos")
-async def list_videos() -> JSONResponse:
+@app.get("/videos")
+async def list_videos() -> HTMLResponse:
     """Uploads a file to the server."""
     videos = query_videos()
     # video_paths = [os.path.join(VIDEO_ROOT, video) for video in videos]
@@ -195,8 +195,12 @@ async def list_videos() -> JSONResponse:
         domain_url = f"http://{DOMAIN_NAME}"
     else:
         domain_url = f"https://{DOMAIN_NAME}"
-    video_urls = [f"{domain_url}/v/{video}" for video in videos]
-    return JSONResponse(content=video_urls)
+    html_str = f"""<html><body><h1>Videos</h1>
+    <ul>
+    {''.join(f"<li><a href='{domain_url}/v/{video}'>{video}</a></li>" for video in videos)}
+    </ul>
+    </body></html>"""
+    return HTMLResponse(content=html_str)
 
 
 @app.get("/list_all_files")
