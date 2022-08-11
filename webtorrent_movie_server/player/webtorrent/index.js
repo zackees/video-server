@@ -3,6 +3,7 @@
 
 
 function initWebtorrent(data) {
+    const MIN_SEEDERS = 3
     // Enable WebTorrent debugging for now.
     globalThis.localStorage.debug = '*'
     // Black pixel.
@@ -110,7 +111,8 @@ function initWebtorrent(data) {
         // get the firsts video in the div container with the container class
         var $vid = document.querySelector("div.container>video")
         let isFirst = true
-        for (const subtitle of data.subtitles) {
+        const subtitles = data.subtitles || []
+        for (const subtitle of subtitles) {
             // console.log("subtitles:", subtitle);
             $sourceElement = document.createElement('track');
             // Get the current url
@@ -160,8 +162,27 @@ function initWebtorrent(data) {
     })
 
     torrent.on('ready', () => {
-        console.log('torrent ready')
 
+        //setInterval(() => {
+        //    console.log('torrent:', torrent)
+        //}, 3000)
+
+        console.log('torrent ready')
+        console.log('infoHash:', torrent.infoHash)
+        const opts = {infoHash: torrent.infoHash, announce: torrent.announce}
+        Tracker.scrape(opts, function (err, results) {
+            try {
+                const totalPeers = results.complete + results.incomplete + results.downloaded
+                const threshold = 1
+                if (totalPeers < MIN_SEEDERS) {
+                    console.log(`Adding webseed because total number of peers ${totalPeers} is < ${threshold}`)
+                    addWebSeed()
+                }
+            }
+            catch (e) {
+                console.log('scrape error:', e, "\n", err, "\n", results)
+            }
+        })
         // Warning! This relies on patched webtorrent ICECOMPLETE_TIMEOUT=1000
         // if aggressive
         if (webtorrentOptions.aggressive) {
