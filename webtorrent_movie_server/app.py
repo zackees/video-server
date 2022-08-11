@@ -195,9 +195,7 @@ async def list_videos() -> PlainTextResponse:
         domain_url = f"http://{DOMAIN_NAME}"
     else:
         domain_url = f"https://{DOMAIN_NAME}"
-    vid_urls = [
-        f"{domain_url}/v/{video}" for video in videos
-    ]
+    vid_urls = [f"{domain_url}/v/{video}" for video in videos]
     return PlainTextResponse(content="\n".join(vid_urls))
 
 

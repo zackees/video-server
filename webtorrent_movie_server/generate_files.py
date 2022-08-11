@@ -13,6 +13,7 @@ import hashlib
 import os
 import shutil
 from typing import List, Tuple, Any
+import subprocess
 import time
 import json
 from distutils.dir_util import copy_tree  # pylint: disable=deprecated-module
@@ -61,14 +62,18 @@ def get_files(out_dir: str) -> Tuple[str, str]:  # pylint: disable=too-many-loca
     return torrent_path, html_path
 
 
-def generate_video_json(torrentfile: str, mp4file: str) -> dict[str, Any]:
+def generate_video_json(
+    torrentfile: str, mp4file: str, size_mp4file: int, duration: float
+) -> dict[str, Any]:
     """Generates the video json for the webtorrent player."""
+
     data = {
         "note": "This is a sample and should be overriden during the video creation process",
         "webtorrent": {
             "torrent": "https://webtorrent-webseed.onrender.com/indoctrination.mp4.torrent",
             "webseed": "https://webtorrent-webseed.onrender.com/content/indoctrination.mp4",
-            "aggressive": True,
+            "size": 0,
+            "duration": "000.000000",
         },
         "desktop": {
             "720": "https://webtorrent-webseed.onrender.com/content/indoctrination.mp4"
@@ -82,6 +87,8 @@ def generate_video_json(torrentfile: str, mp4file: str) -> dict[str, Any]:
     }
     data["webtorrent"]["torrent"] = torrentfile  # type: ignore
     data["webtorrent"]["webseed"] = mp4file  # type: ignore
+    data["webtorrent"]["size"] = size_mp4file  # type: ignore
+    data["webtorrent"]["duration"] = duration  # type: ignore
     data["desktop"]["720"] = mp4file  # type: ignore
     data["mobile"] = mp4file  # type: ignore
     # TODO: figure out subtitle logic. For now just disable.
@@ -113,13 +120,31 @@ def create_webtorrent_files(
     print(f"Running\n    {cmd}")
     # subprocess.check_output(cmd, shell=True)
     os.system(cmd)
+
+    size_mp4file = os.path.getsize(vidfile)
+    stdout = subprocess.check_output(
+        f'static_ffprobe "{vidfile}" -show_format 2>&1', shell=True
+    )
+    lines = stdout.decode().splitlines()
+    duration = "?"
+    for line in lines:
+        if line.startswith("duration"):
+            duration = float(line.split("=")[1])
+            break
+    assert duration != "?", f"Missing duration in {vidfile}"
+
     vid_name = os.path.basename(os.path.dirname(vidfile))
     assert os.path.exists(torrent_path), f"Missing expected {torrent_path}"
     http_type = "http" if "localhost" in domain_name else "https"
     torrent_url = f"{http_type}://{domain_name}/v/{vid_name}/index.torrent"
     webseed = f"{http_type}://{domain_name}/v/{vid_name}/vid.mp4"
     copy_tree(PLAYER_DIR, out_dir)
-    dict_data = generate_video_json(torrentfile=torrent_url, mp4file=webseed)
+    dict_data = generate_video_json(
+        torrentfile=torrent_url,
+        mp4file=webseed,
+        size_mp4file=size_mp4file,
+        duration=duration,
+    )
     json_data = json.dumps(dict_data, indent=4)
     write_utf8(os.path.join(out_dir, "video.json"), contents=json_data)
     assert os.path.exists(html_path), f"Missing {html_path}"
