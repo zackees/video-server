@@ -2,10 +2,18 @@
   Note that this has been patched with the following:
   
   const ICECOMPLETE_TIMEOUT = 1 * 1000
-  Which SIGNIFICANTLY speeds up webtorrent.
 
-  Replaced all instances of function process.nextTick with queueMicrotask to
-  improve background performance. Tested to work well.
+  Which SIGNIFICANTLY speeds up webtorrent.
+  
+  Made Tracker a global symbol.
+
+  Made WebTorrent it's own symbol.
+
+  Defensively blocked unchoking webSeeds:
+    if (this.type === "webSeed") {
+        console.log("webseed blocked unchocked, they are always choked.")
+        return
+    }
 */
 
 
@@ -9473,6 +9481,10 @@
                          */
                         unchoke() {
                             if (!this.amChoking) return
+                            if (this.type === "webSeed") {
+                                console.log("webseed blocked unchocked, they are always choked.")
+                                return
+                            }
                             this.amChoking = false
                             this._debug('unchoke')
                             this._push(MESSAGE_UNCHOKE)
@@ -26189,7 +26201,7 @@
                         };
 
                         var onclose = function () {
-                            queueMicrotask(onclosenexttick);
+                            process.nextTick(onclosenexttick);
                         };
 
                         var onclosenexttick = function () {
@@ -28801,7 +28813,7 @@
                         removeTokens: function (count, callback) {
                             // Make sure the request isn't for more than we can handle
                             if (count > this.tokenBucket.bucketSize) {
-                                queueMicrotask(callback.bind(null, 'Requested tokens ' + count +
+                                process.nextTick(callback.bind(null, 'Requested tokens ' + count +
                                     ' exceeds maximum tokens per interval ' + this.tokenBucket.bucketSize,
                                     null));
                                 return false;
@@ -28822,7 +28834,7 @@
                             // next interval
                             if (count > this.tokenBucket.tokensPerInterval - this.tokensThisInterval) {
                                 if (this.fireImmediately) {
-                                    queueMicrotask(callback.bind(null, null, -1));
+                                    process.nextTick(callback.bind(null, null, -1));
                                 } else {
                                     var waitInterval = Math.ceil(
                                         this.curIntervalStart + this.tokenBucket.interval - now);
@@ -28962,13 +28974,13 @@
 
                             // Is this an infinite size bucket?
                             if (!this.bucketSize) {
-                                queueMicrotask(callback.bind(null, null, count, Number.POSITIVE_INFINITY));
+                                process.nextTick(callback.bind(null, null, count, Number.POSITIVE_INFINITY));
                                 return true;
                             }
 
                             // Make sure the bucket can hold the requested number of tokens
                             if (count > this.bucketSize) {
-                                queueMicrotask(callback.bind(null, 'Requested tokens ' + count + ' exceeds bucket size ' +
+                                process.nextTick(callback.bind(null, 'Requested tokens ' + count + ' exceeds bucket size ' +
                                     this.bucketSize, null));
                                 return false;
                             }
@@ -28999,7 +29011,7 @@
                             } else {
                                 // Remove the requested tokens from this bucket and fire the callback
                                 this.content -= count;
-                                queueMicrotask(callback.bind(null, null, this.content));
+                                process.nextTick(callback.bind(null, null, this.content));
                                 return true;
                             }
 
@@ -33566,8 +33578,8 @@
                         if (nextTick) {
                             return nextTick
                         }
-                        if (global.process && global.queueMicrotask) {
-                            nextTick = global.queueMicrotask
+                        if (global.process && global.process.nextTick) {
+                            nextTick = global.process.nextTick
                         } else if (global.queueMicrotask) {
                             nextTick = global.queueMicrotask
                         } else if (global.setImmediate) {
@@ -33943,7 +33955,7 @@
                 runClearTimeout(timeout);
             }
 
-            queueMicrotask = function (fun) {
+            process.nextTick = function (fun) {
                 var args = new Array(arguments.length - 1);
                 if (arguments.length > 1) {
                     for (var i = 1; i < arguments.length; i++) {
@@ -35142,7 +35154,7 @@
                         }
 
                         if (typeof cb === 'function') {
-                            return queueMicrotask(function () {
+                            return process.nextTick(function () {
                                 cb(null, bytes)
                             })
                         }
@@ -35226,7 +35238,7 @@
                             var uint = new Uint8Array(ourBuf, offset, size)
                             crypto.getRandomValues(uint)
                             if (cb) {
-                                queueMicrotask(function () {
+                                process.nextTick(function () {
                                     cb(null, buf)
                                 })
                                 return
@@ -35992,7 +36004,7 @@
                         if (this._writableState.ended) return; // no more data can be written.
                         // But allow more writes to happen in this tick.
 
-                        queueMicrotask(onEndNT, this);
+                        process.nextTick(onEndNT, this);
                     }
 
                     function onEndNT(self) {
@@ -36597,7 +36609,7 @@
                         if (!state.emittedReadable) {
                             debug('emitReadable', state.flowing);
                             state.emittedReadable = true;
-                            queueMicrotask(emitReadable_, stream);
+                            process.nextTick(emitReadable_, stream);
                         }
                     }
 
@@ -36629,7 +36641,7 @@
                     function maybeReadMore(stream, state) {
                         if (!state.readingMore) {
                             state.readingMore = true;
-                            queueMicrotask(maybeReadMore_, stream, state);
+                            process.nextTick(maybeReadMore_, stream, state);
                         }
                     }
 
@@ -36698,7 +36710,7 @@
                         debug('pipe count=%d opts=%j', state.pipesCount, pipeOpts);
                         var doEnd = (!pipeOpts || pipeOpts.end !== false) && dest !== process.stdout && dest !== process.stderr;
                         var endFn = doEnd ? onend : unpipe;
-                        if (state.endEmitted) queueMicrotask(endFn); else src.once('end', endFn);
+                        if (state.endEmitted) process.nextTick(endFn); else src.once('end', endFn);
                         dest.on('unpipe', onunpipe);
 
                         function onunpipe(readable, unpipeInfo) {
@@ -36892,7 +36904,7 @@
                                 if (state.length) {
                                     emitReadable(this);
                                 } else if (!state.reading) {
-                                    queueMicrotask(nReadingNextTick, this);
+                                    process.nextTick(nReadingNextTick, this);
                                 }
                             }
                         }
@@ -36912,7 +36924,7 @@
                             // support once('readable', fn) cycles. This means that calling
                             // resume within the same tick will have no
                             // effect.
-                            queueMicrotask(updateReadableListening, this);
+                            process.nextTick(updateReadableListening, this);
                         }
 
                         return res;
@@ -36928,7 +36940,7 @@
                             // support once('readable', fn) cycles. This means that calling
                             // resume within the same tick will have no
                             // effect.
-                            queueMicrotask(updateReadableListening, this);
+                            process.nextTick(updateReadableListening, this);
                         }
 
                         return res;
@@ -36973,7 +36985,7 @@
                     function resume(stream, state) {
                         if (!state.resumeScheduled) {
                             state.resumeScheduled = true;
-                            queueMicrotask(resume_, stream, state);
+                            process.nextTick(resume_, stream, state);
                         }
                     }
 
@@ -37152,7 +37164,7 @@
 
                         if (!state.endEmitted) {
                             state.ended = true;
-                            queueMicrotask(endReadableNT, state, stream);
+                            process.nextTick(endReadableNT, state, stream);
                         }
                     }
 
@@ -37663,7 +37675,7 @@
                         var er = new ERR_STREAM_WRITE_AFTER_END(); // TODO: defer error events consistently everywhere, not just the cb
 
                         errorOrDestroy(stream, er);
-                        queueMicrotask(cb, er);
+                        process.nextTick(cb, er);
                     } // Checks that a user-supplied chunk is valid, especially for the particular
                     // mode the stream is in. Currently this means that `null` is never accepted
                     // and undefined/non-string values are only allowed in object mode.
@@ -37680,7 +37692,7 @@
 
                         if (er) {
                             errorOrDestroy(stream, er);
-                            queueMicrotask(cb, er);
+                            process.nextTick(cb, er);
                             return false;
                         }
 
@@ -37818,10 +37830,10 @@
                         if (sync) {
                             // defer the callback if we are being called synchronously
                             // to avoid piling up things on the stack
-                            queueMicrotask(cb, er); // this can emit finish, and it will always happen
+                            process.nextTick(cb, er); // this can emit finish, and it will always happen
                             // after error
 
-                            queueMicrotask(finishMaybe, stream, state);
+                            process.nextTick(finishMaybe, stream, state);
                             stream._writableState.errorEmitted = true;
                             errorOrDestroy(stream, er);
                         } else {
@@ -37858,7 +37870,7 @@
                             }
 
                             if (sync) {
-                                queueMicrotask(afterWrite, stream, state, finished, cb);
+                                process.nextTick(afterWrite, stream, state, finished, cb);
                             } else {
                                 afterWrite(stream, state, finished, cb);
                             }
@@ -38007,7 +38019,7 @@
                             if (typeof stream._final === 'function' && !state.destroyed) {
                                 state.pendingcb++;
                                 state.finalCalled = true;
-                                queueMicrotask(callFinal, stream, state);
+                                process.nextTick(callFinal, stream, state);
                             } else {
                                 state.prefinished = true;
                                 stream.emit('prefinish');
@@ -38045,7 +38057,7 @@
                         finishMaybe(stream, state);
 
                         if (cb) {
-                            if (state.finished) queueMicrotask(cb); else stream.once('finish', cb);
+                            if (state.finished) process.nextTick(cb); else stream.once('finish', cb);
                         }
 
                         state.ended = true;
@@ -38145,7 +38157,7 @@
                     function onReadable(iter) {
                         // we wait for the next tick, because it might
                         // emit an error with queueMicrotask
-                        queueMicrotask(readAndResolve, iter);
+                        process.nextTick(readAndResolve, iter);
                     }
 
                     function wrapForNext(lastPromise, iter) {
@@ -38188,7 +38200,7 @@
                                 // we cannot guarantee that there is no error lingering around
                                 // waiting to be emitted.
                                 return new Promise(function (resolve, reject) {
-                                    queueMicrotask(function () {
+                                    process.nextTick(function () {
                                         if (_this[kError]) {
                                             reject(_this[kError]);
                                         } else {
@@ -38538,10 +38550,10 @@
                                 cb(err);
                             } else if (err) {
                                 if (!this._writableState) {
-                                    queueMicrotask(emitErrorNT, this, err);
+                                    process.nextTick(emitErrorNT, this, err);
                                 } else if (!this._writableState.errorEmitted) {
                                     this._writableState.errorEmitted = true;
-                                    queueMicrotask(emitErrorNT, this, err);
+                                    process.nextTick(emitErrorNT, this, err);
                                 }
                             }
 
@@ -38562,18 +38574,18 @@
                         this._destroy(err || null, function (err) {
                             if (!cb && err) {
                                 if (!_this._writableState) {
-                                    queueMicrotask(emitErrorAndCloseNT, _this, err);
+                                    process.nextTick(emitErrorAndCloseNT, _this, err);
                                 } else if (!_this._writableState.errorEmitted) {
                                     _this._writableState.errorEmitted = true;
-                                    queueMicrotask(emitErrorAndCloseNT, _this, err);
+                                    process.nextTick(emitErrorAndCloseNT, _this, err);
                                 } else {
-                                    queueMicrotask(emitCloseNT, _this);
+                                    process.nextTick(emitCloseNT, _this);
                                 }
                             } else if (cb) {
-                                queueMicrotask(emitCloseNT, _this);
+                                process.nextTick(emitCloseNT, _this);
                                 cb(err);
                             } else {
-                                queueMicrotask(emitCloseNT, _this);
+                                process.nextTick(emitCloseNT, _this);
                             }
                         });
 
@@ -43898,7 +43910,7 @@
                             try {
                                 xhr.open(self._opts.method, self._opts.url, true)
                             } catch (err) {
-                                queueMicrotask(function () {
+                                process.nextTick(function () {
                                     self.emit('error', err)
                                 })
                                 return
@@ -43952,7 +43964,7 @@
                             try {
                                 xhr.send(body)
                             } catch (err) {
-                                queueMicrotask(function () {
+                                process.nextTick(function () {
                                     self.emit('error', err)
                                 })
                                 return
@@ -44118,7 +44130,7 @@
                         // Fake the 'close' event, but only once 'end' fires
                         self.on('end', function () {
                             // The nextTick is necessary to prevent the 'request' module from causing an infinite loop
-                            queueMicrotask(function () {
+                            process.nextTick(function () {
                                 self.emit('close')
                             })
                         })
@@ -45595,7 +45607,7 @@
                     const DHT = require('bittorrent-dht/client') // empty object in browser
                     const EventEmitter = require('events').EventEmitter
                     const parallel = require('run-parallel')
-                    const Tracker = require('bittorrent-tracker/client')
+                    const Tracker = globalThis.Tracker = require('bittorrent-tracker/client')
                     const LSD = require('bittorrent-lsd')
 
                     class Discovery extends EventEmitter {
