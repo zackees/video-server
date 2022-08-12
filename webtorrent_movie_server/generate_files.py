@@ -9,6 +9,7 @@ Generates webtorrent files.
 # pylint: disable=unnecessary-lambda
 # pylint: disable=fixme
 from codecs import ignore_errors
+from distutils.log import warn
 import sys
 import hashlib
 import os
@@ -17,6 +18,7 @@ from typing import List, Tuple, Any, Optional
 import subprocess
 import time
 import json
+import warnings
 from distutils.dir_util import copy_tree  # pylint: disable=deprecated-module
 from webtorrent_movie_server.settings import (
     DOMAIN_NAME,
@@ -24,6 +26,7 @@ from webtorrent_movie_server.settings import (
     TRACKER_ANNOUNCE_LIST,
 )
 from webtorrent_movie_server.generate_video_json import generate_video_json
+
 
 # WORK IN PROGRESS
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -256,6 +259,7 @@ def sync_source_file(file: str, out_file: str) -> bool:
     return False
 
 
+
 def init_static_files(out_dir: str) -> None:
     """Initializes the static files."""
     assert os.path.exists(out_dir)
@@ -264,8 +268,13 @@ def init_static_files(out_dir: str) -> None:
     demo_dir = os.path.join(out_dir, "demo")
     os.makedirs(demo_dir, exist_ok=True)
     # shutil.copy clobbers files if they already exist.
-    shutil.copy(os.path.join(TESTS_DATA, "subtitles.zip"), os.path.join(demo_dir, "subtitles.zip"))
-    shutil.copy(os.path.join(TESTS_DATA, "test.mp4"), os.path.join(demo_dir, "test.mp4"))
+    for file in ["subtitles.js", "test.mp4"]:
+        src = os.path.join(TESTS_DATA, file)
+        dst = os.path.join(demo_dir, file)
+        if os.path.exists(src):
+            shutil.copy(src, dst)        
+        else:
+            warnings.warn(f"Missing {src}")
 
 
 def main() -> int:
