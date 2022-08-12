@@ -1,12 +1,13 @@
 
-function initMobileVideo(data) {
+function initMobileVideo(videoJson) {
     $videoSource = document.getElementById("video-source")
-    $videoSource.src = data.mobile
+    $videoSource.src = videoJson.mobile
 
-    // Add data to the dom.
+    // Add videoJson to the dom.
     const $vid = document.getElementById('vid1');
     let isFirst = true
-    for (const subtitle of data.subtitles) {
+    const subtitles = videoJson.subtitles || []
+    for (const subtitle of subtitles) {
         // console.log("subtitles:", subtitle);
         $sourceElement = document.createElement('track');
         // Get the current url
@@ -17,9 +18,8 @@ function initMobileVideo(data) {
         if (href.endsWith("/")) {
             href = href.substring(0, href.length - 1)
         }
-        const baseUrl = href.substring(0, href.lastIndexOf("/"))
         // Combine the url and the subtitle file, going up one directory.
-        const src = baseUrl + "/subtitles/" + subtitle.file;
+        const src = subtitle.file;
         $sourceElement.setAttribute('label', subtitle.label);
         $sourceElement.setAttribute('srclang', subtitle.srclang);
         $sourceElement.setAttribute('src', src);
@@ -47,10 +47,18 @@ function initMobileVideo(data) {
     }
 }
 
-fetch("../video.json", { method: 'GET' })
+// Get the video.json, which will be the "d" parameter in the URL
+const params = new URLSearchParams(window.location.search)
+const videoJson = params.get('d')
+if (!videoJson) {
+    console.error('No videoJson parameter in URL')
+}
+
+fetch(videoJson, { method: 'GET' })
     .then((response) => {
-        response.json().then((data) => {
-            initMobileVideo(data)
+        response.json().then((videoJson) => {
+            console.log("videoJson:", videoJson)
+            initMobileVideo(videoJson)
         })
     })
     .catch((error) => {

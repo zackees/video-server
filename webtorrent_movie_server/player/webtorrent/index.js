@@ -2,13 +2,13 @@
 
 
 
-function initWebtorrent(data) {
-    const MIN_SEEDERS = 3
+function initWebtorrent(videoJson) {
+    const MIN_SEEDERS = 5
     // Enable WebTorrent debugging for now.
     globalThis.localStorage.debug = '*'
     // Black pixel.
-    const poster = data.poster || "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjYGBk/A8AAQkBAubzvZ0AAAAASUVORK5CYII="
-    const webtorrentOptions = data.webtorrent
+    const poster = videoJson.poster || "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjYGBk/A8AAQkBAubzvZ0AAAAASUVORK5CYII="
+    const webtorrentOptions = videoJson.webtorrent
     const ICE_CONFIGURATION = {
         iceServers: [
             {
@@ -105,13 +105,14 @@ function initWebtorrent(data) {
         $vid.poster = poster
     }, 0);
 
-    function onVideoLoaded(data) {
+    function onVideoLoaded(videoJson) {
         console.log('onVideoLoaded')
         // console.log(document.querySelector("div.container>video"))
         // get the firsts video in the div container with the container class
+        const urlSlug = videoJson.urlslug
         var $vid = document.querySelector("div.container>video")
         let isFirst = true
-        const subtitles = data.subtitles || []
+        const subtitles = videoJson.subtitles || []
         for (const subtitle of subtitles) {
             // console.log("subtitles:", subtitle);
             $sourceElement = document.createElement('track');
@@ -123,9 +124,8 @@ function initWebtorrent(data) {
             if (href.endsWith("/")) {
                 href = href.substring(0, href.length - 1)
             }
-            const baseUrl = href.substring(0, href.lastIndexOf("/"))
             // Combine the url and the subtitle file, going up one directory.
-            const src = baseUrl + "/subtitles/" + subtitle.file;
+            const src = subtitle.file;
             $sourceElement.setAttribute('label', subtitle.label);
             $sourceElement.setAttribute('srclang', subtitle.srclang);
             $sourceElement.setAttribute('src', src);
@@ -169,11 +169,11 @@ function initWebtorrent(data) {
 
         console.log('torrent ready')
         console.log('infoHash:', torrent.infoHash)
-        const opts = {infoHash: torrent.infoHash, announce: torrent.announce}
+        const opts = { infoHash: torrent.infoHash, announce: torrent.announce }
         Tracker.scrape(opts, function (err, results) {
             try {
                 const totalPeers = results.complete + results.incomplete + results.downloaded
-                const threshold = 1
+                const threshold = 5
                 if (totalPeers < MIN_SEEDERS) {
                     console.log(`Adding webseed because total number of peers ${totalPeers} is < ${threshold}`)
                     addWebSeed()
@@ -218,14 +218,22 @@ function initWebtorrent(data) {
         const file = torrent.files.find(file => file.name.endsWith('.mp4') || file.name.endsWith('.webm'))
         // Display the file by adding it to the DOM
         file.appendTo(document.querySelector("div.container"), { autoplay: true })
-        onVideoLoaded(data)
+        onVideoLoaded(videoJson)
     })
 }
 
-fetch("../video.json", { method: 'GET' })
+// Get the video.json, which will be the "d" parameter in the URL
+const params = new URLSearchParams(window.location.search)
+const videoJson = params.get('d')
+if (!videoJson) {
+    console.error('No videoJson parameter in URL')
+}
+
+fetch(videoJson, { method: 'GET' })
     .then((response) => {
-        response.json().then((data) => {
-            initWebtorrent(data)
+        response.json().then((videoJson) => {
+            console.log("videoJson:", videoJson)
+            initWebtorrent(videoJson)
         })
     })
     .catch((error) => {

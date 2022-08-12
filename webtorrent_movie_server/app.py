@@ -6,7 +6,7 @@ import datetime
 import os
 import shutil
 import threading
-from typing import List
+from typing import List, Optional
 
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 
@@ -199,6 +199,19 @@ async def list_videos() -> PlainTextResponse:
     return PlainTextResponse(content="\n".join(vid_urls))
 
 
+def path_to_url(full_path: str) -> str:
+    """Returns the path to the www directory."""
+    if "localhost" in DOMAIN_NAME:
+        domain_url = f"http://{DOMAIN_NAME}"
+    else:
+        domain_url = f"https://{DOMAIN_NAME}"
+    full_path = full_path.replace('\\', '/')  # Normalize forward slash
+    rel_path = full_path.replace(WWW_ROOT, "")
+    if rel_path.startswith("/"):
+        rel_path = rel_path[1:]
+    file = f"{domain_url}/{rel_path}"
+    return file
+
 @app.get("/list_all_files")
 def list_all_files() -> JSONResponse:
     """List all files in a directory."""
@@ -206,12 +219,14 @@ def list_all_files() -> JSONResponse:
         domain_url = f"http://{DOMAIN_NAME}"
     else:
         domain_url = f"https://{DOMAIN_NAME}"
-
-    files = []
+    while domain_url.endswith("/"):
+        domain_url = domain_url[:-1]
+    urls = []
     for dir_name, _, file_list in os.walk(WWW_ROOT):
         for filename in file_list:
-            files.append(f"{domain_url}/{dir_name}/{filename}")
-    return JSONResponse(files)
+            url = path_to_url(os.path.join(dir_name, filename))
+            urls.append(url)
+    return JSONResponse(urls)
 
 
 def touch(fname):
@@ -225,6 +240,7 @@ def touch(fname):
 @app.post("/upload")
 async def upload(  # pylint: disable=too-many-branches
     file: UploadFile = File(...),
+    subtitles_zip: Optional[UploadFile] = File(None),
 ) -> PlainTextResponse:
     """Uploads a file to the server."""
     if not file.filename.lower().endswith(".mp4"):
@@ -248,6 +264,16 @@ async def upload(  # pylint: disable=too-many-branches
         while (chunk := await file.read(1024 * 64)) != b"":
             filed.write(chunk)
     await file.close()
+
+    if subtitles_zip is not None:
+        print(f"Uploading subtitles: {subtitles_zip.filename}")
+        with open(os.path.join(out_dir, "subtitles.zip"), mode="wb") as filed:
+            while (chunk := await subtitles_zip.read(1024 * 64)) != b"":
+                filed.write(chunk)
+        await subtitles_zip.close()
+        shutil.unpack_archive(os.path.join(out_dir, "subtitles.zip"), os.path.join(out_dir, "subtitles"))
+        os.remove(os.path.join(out_dir, "subtitles.zip"))
+
     # TODO: Final check, use ffprobe to check if it is a valid mp4 file that can be  # pylint: disable=fixme
     # streamed.
     create_webtorrent_files(
@@ -257,7 +283,8 @@ async def upload(  # pylint: disable=too-many-branches
         stun_servers=STUN_SERVERS,
         out_dir=out_dir,
     )
-    return PlainTextResponse(content=f"wrote file okay at location: {final_path}")
+    url = path_to_url(os.path.dirname(final_path))
+    return PlainTextResponse(content=f"Video Created!: {url}")
 
 
 def video_path(video: str) -> str:

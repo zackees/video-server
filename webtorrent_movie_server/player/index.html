@@ -2,35 +2,48 @@
 <html>
 
 <head>
-  <meta charset="UTF-8">
-  <style>
-    * {
-        margin: 0;
-        padding: 0;
-    }
-    html, body {
-        margin: 0;
-        height: 100%;
-        padding: 0;
-        overflow: hidden;
-        background-color: black;
-    }
-    #iframe-target {
-      width: 100vw;
-      height: 100vh;
-      border: 0;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+            padding: 0;
+            overflow: hidden;
+            background-color: black;
+        }
+
+        #iframe-target {
+            width: 100vw;
+            height: 100vh;
+            border: 0;
+        }
+
+    </style>
 </head>
 
 <body>
     <iframe id="iframe-target"></iframe>
 </body>
 
+<!-- This is the self contained file for player + mp4 in same folder -->
+
+
 <script src="index.js"></script>
 <script>
+    // Note, fetchPlayerIframeUrl will search url search params for "&p=N", for N = 0,1,2,3
+    // If found, it will use that param to determine which player to use.
     fetchPlayerIframeUrl((iframeUrl, clientType) => {
-        document.getElementById("iframe-target").src = iframeUrl
+        // Get the current url path to this file
+        const src = "/player/" + clientType + "/index.html" + window.location.search
+        console.log("iframe: " + src);
+        // Pass the url parameters to the player
+        document.getElementById("iframe-target").src = src
     })
 </script>
 

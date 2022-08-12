@@ -135,7 +135,7 @@
             const i = Number.parseInt(player)
             switch (i) {
                 case 0:
-                    cb("webtorrent/index.html", "desktop")
+                    cb("webtorrent/index.html", "webtorrent")
                     return
                 case 1:
                     cb("desktop/index.html", "desktop")
@@ -156,7 +156,7 @@
             fetchNATtype((type) => {
                 // console.log("NAT type: " + type)
                 if (type === "Permissive NAT") {
-                    cb("webtorrent/index.html", "desktop")
+                    cb("webtorrent/index.html", "webtorrent")
                 } else {
                     cb("desktop/index.html", "desktop")
                 }
