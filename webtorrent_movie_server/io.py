@@ -7,8 +7,8 @@ from pathvalidate import sanitize_filepath
 
 def sanitze_path(path: str) -> str:
     """Sanitizes a path."""
-    return (
-        sanitize_filepath(path)
+    return str(
+        sanitize_filepath(path)  # type: ignore
         .replace(" ", "_")
         .replace("/", "_")
         .replace("\\", "_")
