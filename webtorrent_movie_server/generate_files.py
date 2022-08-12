@@ -12,44 +12,29 @@ Generates webtorrent files.
 # pylint: disable=too-many-branches
 # pylint: disable=too-many-statements
 
-import sys
 import hashlib
+import json
 import os
 import shutil
-from pprint import pprint
-from typing import List, Tuple, Optional
 import subprocess
+import sys
 import time
-import json
 import warnings
 from distutils.dir_util import copy_tree  # pylint: disable=deprecated-module
-from webtorrent_movie_server.settings import (
-    DOMAIN_NAME,
-    STUN_SERVERS,
-    TRACKER_ANNOUNCE_LIST,
-)
-from webtorrent_movie_server.generate_video_json import generate_video_json
+from pprint import pprint
+from typing import List, Optional, Tuple
 
+from webtorrent_movie_server.generate_video_json import generate_video_json
+from webtorrent_movie_server.io import read_utf8, sanitze_path, write_utf8
+from webtorrent_movie_server.lang import lang_label
+from webtorrent_movie_server.settings import (DOMAIN_NAME, STUN_SERVERS,
+                                              TRACKER_ANNOUNCE_LIST)
 
 # WORK IN PROGRESS
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(HERE)
 TESTS_DATA = os.path.join(PROJECT_ROOT, "tests", "test_data")
 PLAYER_DIR = os.path.join(HERE, "player")
-
-
-def read_utf8(file: str) -> str:
-    """Reads a file and returns its contents as a string."""
-    with open(file, encoding="utf-8", mode="r") as f:
-        return f.read()
-
-
-def write_utf8(file: str, contents: str) -> None:
-    """Writes a string to a file."""
-    with open(file, encoding="utf-8", mode="w") as f:
-        f.write(contents)
-
-
 HTML_TEMPLATE = read_utf8(os.path.join(HERE, "template.html"))
 REDIRECT_HTML = os.path.join(HERE, "redirect.html")
 
@@ -111,6 +96,7 @@ def query_duration(vidfile: str) -> float:
 
 
 def create_webtorrent_files(
+    vid_name: str,
     vidfile: str,
     domain_name: str,
     tracker_announce_list: List[str],
@@ -133,88 +119,15 @@ def create_webtorrent_files(
     print(f"Subtitles dir: {subtitles_dir}")
     size_mp4file = os.path.getsize(vidfile)
     duration: float = query_duration(vidfile)
-    # Vidname is currently the parent directory, and this should be changed later.
-    vid_name = os.path.basename(out_dir)
     http_type = "http" if "localhost" in domain_name else "https"
-    torrent_url = f"{http_type}://{domain_name}/v/{vid_name}/index.torrent"
-    webseed = f"{http_type}://{domain_name}/v/{vid_name}/vid.mp4"
-    url_slug = f"/v/{vid_name}"
+    vidpath = sanitze_path(vid_name)
+    torrent_url = f"{http_type}://{domain_name}/v/{vidpath}/index.torrent"
+    webseed = f"{http_type}://{domain_name}/v/{vidpath}/vid.mp4"
+    url_slug = f"/v/{vidpath}"
 
-    def lang_label(langname: str) -> str:
-        """Returns a label for a given name."""
-        if langname.startswith("en"):
-            return "English"
-        if langname.startswith("es"):
-            return "Spanish"
-        if langname.startswith("fr"):
-            return "French"
-        if langname.startswith("pt"):
-            return "Portuguese"
-        if langname.startswith("it"):
-            return "Italian"
-        if langname.startswith("de"):
-            return "German"
-        if langname.startswith("ru"):
-            return "Russian"
-        if langname.startswith("ja"):
-            return "Japanese"
-        if langname.startswith("zh"):
-            return "Chinese"
-        if langname.startswith("ko"):
-            return "Korean"
-        if langname.startswith("ar"):
-            return "Arabic"
-        if langname.startswith("tr"):
-            return "Turkish"
-        if langname.startswith("pl"):
-            return "Polish"
-        if langname.startswith("nl"):
-            return "Dutch"
-        if langname.startswith("el"):
-            return "Greek"
-        if langname.startswith("hi"):
-            return "Hindi"
-        if langname.startswith("th"):
-            return "Thai"
-        if langname.startswith("vi"):
-            return "Vietnamese"
-        if langname.startswith("id"):
-            return "Indonesian"
-        if langname.startswith("fa"):
-            return "Persian"
-        if langname.startswith("he"):
-            return "Hebrew"
-        if langname.startswith("sq"):
-            return "Albanian"
-        if langname.startswith("ro"):
-            return "Romanian"
-        if langname.startswith("sr"):
-            return "Serbian"
-        if langname.startswith("uk"):
-            return "Ukrainian"
-        if langname.startswith("hr"):
-            return "Croatian"
-        if langname.startswith("cs"):
-            return "Czech"
-        if langname.startswith("sk"):
-            return "Slovak"
-        if langname.startswith("sl"):
-            return "Slovenian"
-        if langname.startswith("bg"):
-            return "Bulgarian"
-        if langname.startswith("hu"):
-            return "Hungarian"
-        if langname.startswith("lt"):
-            return "Lithuanian"
-        if langname.startswith("lv"):
-            return "Latvian"
-        if langname.startswith("mk"):
-            return "Macedonian"
-        if langname.startswith("fa"):
-            return "Persian"
-        return langname
-
-    vtt_files = [f for f in os.listdir(subtitles_dir) if f.endswith(".vtt")]
+    vtt_files = []
+    if os.path.exists(subtitles_dir):
+        vtt_files = [f for f in os.listdir(subtitles_dir) if f.endswith(".vtt")]
     print(f"Found {len(vtt_files)} vtt files")
 
     def lang_name(vtt_file: str) -> str:
@@ -232,7 +145,7 @@ def create_webtorrent_files(
     print(f"Subtitles: {subtitles}")
     dict_data = generate_video_json(
         domain_name=domain_name,
-        vidname=os.path.splitext(vid_name)[0].replace(".mp4", ""),
+        vidname=vidpath,
         url_slug=url_slug,
         torrentfile=torrent_url,
         mp4file=webseed,
@@ -244,23 +157,9 @@ def create_webtorrent_files(
     pprint(dict_data)
     json_data = json.dumps(dict_data, indent=4)
     write_utf8(os.path.join(out_dir, "video.json"), contents=json_data)
-    # Generate player files.
-    # mklink(PLAYER_DIR, link_path = os.path.join(out_dir, "player"))
-    # link_index_html = os.path.join(out_dir, "index.html")
-    # src_index_html = os.path.join(PLAYER_DIR, "index.html")
-    # mklink(src_index_html, link_path=link_index_html)
-    # assert os.path.exists(html_path), "Missing " + os.path.abspath(html_path)
-    # if not os.path.exists(REDIRECT_HTML):
-    #    print("Missing " + os.path.abspath(html_path))
-
     src_html = os.path.join(PLAYER_DIR, "index.template.html")
     dst_html = os.path.join(out_dir, "index.html")
     sync_source_file(src_html, dst_html)
-    # Debug code from debugging subtitles
-    # Copy /player/subtitles to out_dir/subtitles
-    # src_subtitles = os.path.join(HERE, "subtitles")
-    # dst_subtitles = os.path.join(out_dir, "subtitles")
-    # shutil.copytree(src_subtitles, dst_subtitles)
     return (html_path, torrent_path)
 
 
@@ -325,8 +224,11 @@ def main() -> int:
     html_str = "<html><body><ul>"
     for movie_file in files:
         try:
+            # strip extension
+            vidname = os.path.splitext(os.path.basename(movie_file))[0]
             iframe_src, torrent_path = create_webtorrent_files(
-                movie_file,
+                vid_name=vidname,
+                vidfile=movie_file,
                 domain_name=DOMAIN_NAME,
                 tracker_announce_list=TRACKER_ANNOUNCE_LIST,
                 stun_servers=STUN_SERVERS,

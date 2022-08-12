@@ -1,26 +1,26 @@
 {
     "note": "This is a sample and should be overriden during the video creation process",
-    "name": "generate_files",
-    "urlslug": "/v/generate_files",
+    "name": "test",
+    "urlslug": "/v/test",
     "domain": "video-server.onrender.com",
     "webtorrent": {
-        "torrent": "https://video-server.onrender.com/v/generate_files/index.torrent",
-        "webseed": "https://video-server.onrender.com/v/generate_files/vid.mp4",
+        "torrent": "https://video-server.onrender.com/v/test/index.torrent",
+        "webseed": "https://video-server.onrender.com/v/test/vid.mp4",
         "size": 19173680,
         "duration": 59.815
     },
     "desktop": {
-        "720": "https://video-server.onrender.com/v/generate_files/vid.mp4"
+        "720": "https://video-server.onrender.com/v/test/vid.mp4"
     },
-    "mobile": "https://video-server.onrender.com/v/generate_files/vid.mp4",
+    "mobile": "https://video-server.onrender.com/v/test/vid.mp4",
     "subtitles": [
         {
-            "file": "/v/generate_files/subtitles/en.vtt",
+            "file": "/v/test/subtitles/en.vtt",
             "srclang": "en",
             "label": "English"
         },
         {
-            "file": "/v/generate_files/subtitles/es.vtt",
+            "file": "/v/test/subtitles/es.vtt",
             "srclang": "es",
             "label": "Spanish"
         }

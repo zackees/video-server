@@ -1,40 +1,30 @@
 """
     Fastapi server
 """
-import secrets
 import datetime
 import os
+import secrets
 import shutil
 import threading
-from typing import List, Optional
+from typing import Optional
 
-from keyvalue_sqlite import KeyValueSqlite  # type: ignore
-
-from fastapi import FastAPI, File, UploadFile, Depends, HTTPException, status
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.staticfiles import StaticFiles
+from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 
-
-from webtorrent_movie_server.generate_files import (
-    create_webtorrent_files,
-    init_static_files,
-)
-from webtorrent_movie_server.settings import (
-    DOMAIN_NAME,
-    PROJECT_ROOT,
-    STUN_SERVERS,
-    TRACKER_ANNOUNCE_LIST,
-    APP_DB,
-    DATA_ROOT,
-    LOGFILE,
-    WWW_ROOT,
-    VIDEO_ROOT,
-)
+from webtorrent_movie_server.db import (db_add_video, db_list_all_files,
+                                        db_query_videos, path_to_url)
+from webtorrent_movie_server.generate_files import (create_webtorrent_files,
+                                                    init_static_files)
+from webtorrent_movie_server.settings import (APP_DB, DATA_ROOT, DOMAIN_NAME,
+                                              LOGFILE, PROJECT_ROOT,
+                                              STUN_SERVERS,
+                                              TRACKER_ANNOUNCE_LIST,
+                                              VIDEO_ROOT, WWW_ROOT)
 from webtorrent_movie_server.version import VERSION
-
-CHUNK_SIZE = 1024 * 1024
 
 print("Starting fastapi webtorrent movie server")
 
@@ -157,7 +147,7 @@ async def api_info() -> JSONResponse:
         domain_url = f"http://{DOMAIN_NAME}"
     else:
         domain_url = f"https://{DOMAIN_NAME}"
-    videos = sorted(query_videos())
+    videos = sorted(db_query_videos())
     links = [f"{domain_url}/v/{video}" for video in videos]
     out = {
         "version": VERSION,
@@ -178,18 +168,10 @@ async def api_info() -> JSONResponse:
     return JSONResponse(out)
 
 
-def query_videos() -> List[str]:
-    """Returns a list of videos in the video directory."""
-    videos = [
-        d for d in os.listdir(VIDEO_ROOT) if os.path.isdir(os.path.join(VIDEO_ROOT, d))
-    ]
-    return sorted(videos)
-
-
 @app.get("/videos")
 async def list_videos() -> PlainTextResponse:
     """Uploads a file to the server."""
-    videos = query_videos()
+    videos = db_query_videos()
     # video_paths = [os.path.join(VIDEO_ROOT, video) for video in videos]
     if "localhost" in DOMAIN_NAME:
         domain_url = f"http://{DOMAIN_NAME}"
@@ -199,34 +181,10 @@ async def list_videos() -> PlainTextResponse:
     return PlainTextResponse(content="\n".join(vid_urls))
 
 
-def path_to_url(full_path: str) -> str:
-    """Returns the path to the www directory."""
-    if "localhost" in DOMAIN_NAME:
-        domain_url = f"http://{DOMAIN_NAME}"
-    else:
-        domain_url = f"https://{DOMAIN_NAME}"
-    full_path = full_path.replace("\\", "/")  # Normalize forward slash
-    rel_path = full_path.replace(WWW_ROOT, "")
-    if rel_path.startswith("/"):
-        rel_path = rel_path[1:]
-    file = f"{domain_url}/{rel_path}"
-    return file
-
-
 @app.get("/list_all_files")
 def list_all_files() -> JSONResponse:
     """List all files in a directory."""
-    if "localhost" in DOMAIN_NAME:
-        domain_url = f"http://{DOMAIN_NAME}"
-    else:
-        domain_url = f"https://{DOMAIN_NAME}"
-    while domain_url.endswith("/"):
-        domain_url = domain_url[:-1]
-    urls = []
-    for dir_name, _, file_list in os.walk(WWW_ROOT):
-        for filename in file_list:
-            url = path_to_url(os.path.join(dir_name, filename))
-            urls.append(url)
+    urls = [path_to_url(file) for file in db_list_all_files()]
     return JSONResponse(urls)
 
 
@@ -240,54 +198,12 @@ def touch(fname):
 
 @app.post("/upload")
 async def upload(  # pylint: disable=too-many-branches
+    title: str,
     file: UploadFile = File(...),
     subtitles_zip: Optional[UploadFile] = File(None),
 ) -> PlainTextResponse:
     """Uploads a file to the server."""
-    if not file.filename.lower().endswith(".mp4"):
-        return PlainTextResponse(
-            status_code=415, content="Invalid file type, must be mp4"
-        )
-    if not os.path.exists(DATA_ROOT):
-        return PlainTextResponse(
-            status_code=500,
-            content=f"File upload not enabled because DATA_ROOT {DATA_ROOT} does not exist",
-        )
-    # Use the name of the file as the folder for the new content.
-
-    print(f"Uploading file: {file.filename}")
-    out_dir = os.path.join(
-        VIDEO_ROOT, os.path.splitext(os.path.basename(file.filename))[0]
-    )
-    os.makedirs(out_dir, exist_ok=True)
-    final_path = os.path.join(out_dir, "vid.mp4")
-    with open(final_path, mode="wb") as filed:
-        while (chunk := await file.read(1024 * 64)) != b"":
-            filed.write(chunk)
-    await file.close()
-
-    if subtitles_zip is not None:
-        print(f"Uploading subtitles: {subtitles_zip.filename}")
-        with open(os.path.join(out_dir, "subtitles.zip"), mode="wb") as filed:
-            while (chunk := await subtitles_zip.read(1024 * 64)) != b"":
-                filed.write(chunk)
-        await subtitles_zip.close()
-        shutil.unpack_archive(
-            os.path.join(out_dir, "subtitles.zip"), os.path.join(out_dir, "subtitles")
-        )
-        os.remove(os.path.join(out_dir, "subtitles.zip"))
-
-    # TODO: Final check, use ffprobe to check if it is a valid mp4 file that can be  # pylint: disable=fixme
-    # streamed.
-    create_webtorrent_files(
-        vidfile=final_path,
-        domain_name=DOMAIN_NAME,
-        tracker_announce_list=TRACKER_ANNOUNCE_LIST,
-        stun_servers=STUN_SERVERS,
-        out_dir=out_dir,
-    )
-    url = path_to_url(os.path.dirname(final_path))
-    return PlainTextResponse(content=f"Video Created!: {url}")
+    return await db_add_video(title, file, subtitles_zip)
 
 
 def video_path(video: str) -> str:
@@ -298,10 +214,13 @@ def video_path(video: str) -> str:
 @app.patch("/regenerate")
 def regenerate() -> JSONResponse:
     """Regenerate the files."""
-    vid_files = [video_path(v) for v in query_videos()]
+    vid_files = [video_path(v) for v in db_query_videos()]
     for vidf in vid_files:
+        # get name and split extension
+        name = os.path.splitext(os.path.basename(vidf))[0]
         create_webtorrent_files(
             vidfile=vidf,
+            vid_name=name,
             domain_name=DOMAIN_NAME,
             tracker_announce_list=TRACKER_ANNOUNCE_LIST,
             stun_servers=STUN_SERVERS,
