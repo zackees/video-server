@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+            padding: 0;
+            overflow: hidden;
+            background-color: black;
+        }
+
+        #iframe-target {
+            width: 100vw;
+            height: 100vh;
+            border: 0;
+        }
+
+    </style>
+</head>
+
+
+<!-- This is a remote file template, where all common items are in the player folder.  -->
+
+<iframe id="iframe-target"></iframe>
+
+<script>
+    let currentPath = window.location.pathname;
+    // If current path ends in index.html, remove it
+    if (currentPath.endsWith("index.html")) {
+        currentPath = currentPath.slice(0, -10);
+    }
+    if (currentPath.endsWith("/")) {
+        currentPath = currentPath.slice(0, -1);
+    }
+    // Create the path to the video.json file, in the current path
+    const videoJsonPath = encodeURIComponent(currentPath + "/video.json");
+    // Get the player param from the search params
+    let player = new URLSearchParams(window.location.search).get("p");
+    const playerArg = player ? "&p=" + player : "";
+    const iframeSrc = "/player/index.html?d=" + videoJsonPath + playerArg;
+    document.getElementById("iframe-target").src = iframeSrc;
+</script>
+
+<body>
+
+</body>
+
+</html>

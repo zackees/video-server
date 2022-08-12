@@ -1,0 +1,15 @@
+{
+    "note": "This is a sample and should be overriden during the video creation process",
+    "webtorrent": {
+        "torrent": "https://video-server.onrender.com/v/generate_files/index.torrent",
+        "webseed": "https://video-server.onrender.com/v/generate_files/vid.mp4",
+        "size": 3665,
+        "duration": 1.001
+    },
+    "desktop": {
+        "720": "https://video-server.onrender.com/v/generate_files/vid.mp4"
+    },
+    "mobile": "https://video-server.onrender.com/v/generate_files/vid.mp4",
+    "subtitles": [],
+    "todo": "Let's also have bitchute: <URL> and rumble <URL>"
+}
