@@ -1,3 +1,8 @@
+"""
+Generates a dictionary that can be used for json serialization.
+"""
+
+# pylint: disable=too-many-arguments
 
 from typing import Any
 

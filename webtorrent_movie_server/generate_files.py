@@ -8,13 +8,16 @@ Generates webtorrent files.
 # pylint: disable=too-many-locals
 # pylint: disable=unnecessary-lambda
 # pylint: disable=fixme
-from codecs import ignore_errors
-from distutils.log import warn
+# pylint: disable=too-many-return-statements
+# pylint: disable=too-many-branches
+# pylint: disable=too-many-statements
+
 import sys
 import hashlib
 import os
 import shutil
-from typing import List, Tuple, Any, Optional
+from pprint import pprint
+from typing import List, Tuple, Optional
 import subprocess
 import time
 import json
@@ -66,7 +69,10 @@ def get_files(out_dir: str) -> Tuple[str, str]:  # pylint: disable=too-many-loca
     html_path = os.path.join(out_dir, "index.html")
     return torrent_path, html_path
 
-def mktorrent(vidfile: str, torrent_path: str, tracker_announce_list: List[str], chunk_factor: int) -> None:
+
+def mktorrent(
+    vidfile: str, torrent_path: str, tracker_announce_list: List[str], chunk_factor: int
+) -> None:
     """Creates a torrent file."""
     if os.path.exists(torrent_path):
         os.remove(torrent_path)
@@ -89,9 +95,10 @@ def mklink(src: str, link_path: str) -> None:
         os.remove(link_path)
     os.symlink(src, link_path, target_is_directory=os.path.isdir(src))
 
+
 def query_duration(vidfile: str) -> float:
     """Queries the duration of a video."""
-    cmd =  f'static_ffprobe "{vidfile}" -show_format 2>&1'
+    cmd = f'static_ffprobe "{vidfile}" -show_format 2>&1'
     stdout = subprocess.check_output(cmd, shell=True)
     lines = stdout.decode().splitlines()
     duration: Optional[float] = None
@@ -101,6 +108,7 @@ def query_duration(vidfile: str) -> float:
             break
     assert duration is not None, f"Missing duration in {vidfile}"
     return duration
+
 
 def create_webtorrent_files(
     vidfile: str,
@@ -118,7 +126,8 @@ def create_webtorrent_files(
         vidfile=vidfile,
         torrent_path=torrent_path,
         tracker_announce_list=tracker_announce_list,
-        chunk_factor=chunk_factor)
+        chunk_factor=chunk_factor,
+    )
     vidfolder = os.path.dirname(vidfile)
     subtitles_dir = os.path.join(vidfolder, "subtitles")
     print(f"Subtitles dir: {subtitles_dir}")
@@ -129,9 +138,9 @@ def create_webtorrent_files(
     http_type = "http" if "localhost" in domain_name else "https"
     torrent_url = f"{http_type}://{domain_name}/v/{vid_name}/index.torrent"
     webseed = f"{http_type}://{domain_name}/v/{vid_name}/vid.mp4"
-    url_slug=f"/v/{vid_name}"
+    url_slug = f"/v/{vid_name}"
 
-    def lang_label (langname: str) -> str:
+    def lang_label(langname: str) -> str:
         """Returns a label for a given name."""
         if langname.startswith("en"):
             return "English"
@@ -207,9 +216,17 @@ def create_webtorrent_files(
 
     vtt_files = [f for f in os.listdir(subtitles_dir) if f.endswith(".vtt")]
     print(f"Found {len(vtt_files)} vtt files")
-    lang = lambda x: os.path.splitext(os.path.basename(x))[0]
+
+    def lang_name(vtt_file: str) -> str:
+        """Returns the language name from a vtt file name."""
+        return os.path.splitext(os.path.basename(vtt_file))[0]
+
     subtitles = [
-        {"file": f"{url_slug}/subtitles/{file_vtt}", "srclang": lang(file_vtt), "label": lang_label(file_vtt)}
+        {
+            "file": f"{url_slug}/subtitles/{file_vtt}",
+            "srclang": lang_name(file_vtt),
+            "label": lang_label(file_vtt),
+        }
         for file_vtt in vtt_files
     ]
     print(f"Subtitles: {subtitles}")
@@ -221,20 +238,19 @@ def create_webtorrent_files(
         mp4file=webseed,
         size_mp4file=size_mp4file,
         duration=duration,
-        subtitles=subtitles
+        subtitles=subtitles,
     )
     print("video.json:")
-    from pprint import pprint
     pprint(dict_data)
     json_data = json.dumps(dict_data, indent=4)
     write_utf8(os.path.join(out_dir, "video.json"), contents=json_data)
     # Generate player files.
-    #mklink(PLAYER_DIR, link_path = os.path.join(out_dir, "player"))
-    #link_index_html = os.path.join(out_dir, "index.html")
-    #src_index_html = os.path.join(PLAYER_DIR, "index.html")
-    #mklink(src_index_html, link_path=link_index_html)
+    # mklink(PLAYER_DIR, link_path = os.path.join(out_dir, "player"))
+    # link_index_html = os.path.join(out_dir, "index.html")
+    # src_index_html = os.path.join(PLAYER_DIR, "index.html")
+    # mklink(src_index_html, link_path=link_index_html)
     # assert os.path.exists(html_path), "Missing " + os.path.abspath(html_path)
-    #if not os.path.exists(REDIRECT_HTML):
+    # if not os.path.exists(REDIRECT_HTML):
     #    print("Missing " + os.path.abspath(html_path))
 
     src_html = os.path.join(PLAYER_DIR, "index.template.html")
@@ -259,7 +275,6 @@ def sync_source_file(file: str, out_file: str) -> bool:
     return False
 
 
-
 def init_static_files(out_dir: str) -> None:
     """Initializes the static files."""
     assert os.path.exists(out_dir)
@@ -272,7 +287,7 @@ def init_static_files(out_dir: str) -> None:
         src = os.path.join(TESTS_DATA, file)
         dst = os.path.join(demo_dir, file)
         if os.path.exists(src):
-            shutil.copy(src, dst)        
+            shutil.copy(src, dst)
         else:
             warnings.warn(f"Missing {src}")
 

@@ -205,12 +205,13 @@ def path_to_url(full_path: str) -> str:
         domain_url = f"http://{DOMAIN_NAME}"
     else:
         domain_url = f"https://{DOMAIN_NAME}"
-    full_path = full_path.replace('\\', '/')  # Normalize forward slash
+    full_path = full_path.replace("\\", "/")  # Normalize forward slash
     rel_path = full_path.replace(WWW_ROOT, "")
     if rel_path.startswith("/"):
         rel_path = rel_path[1:]
     file = f"{domain_url}/{rel_path}"
     return file
+
 
 @app.get("/list_all_files")
 def list_all_files() -> JSONResponse:
@@ -271,7 +272,9 @@ async def upload(  # pylint: disable=too-many-branches
             while (chunk := await subtitles_zip.read(1024 * 64)) != b"":
                 filed.write(chunk)
         await subtitles_zip.close()
-        shutil.unpack_archive(os.path.join(out_dir, "subtitles.zip"), os.path.join(out_dir, "subtitles"))
+        shutil.unpack_archive(
+            os.path.join(out_dir, "subtitles.zip"), os.path.join(out_dir, "subtitles")
+        )
         os.remove(os.path.join(out_dir, "subtitles.zip"))
 
     # TODO: Final check, use ffprobe to check if it is a valid mp4 file that can be  # pylint: disable=fixme
