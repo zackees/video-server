@@ -1,6 +1,9 @@
 """
     Fastapi server
 """
+
+# pylint: disable=fixme
+
 import datetime
 import os
 import secrets
