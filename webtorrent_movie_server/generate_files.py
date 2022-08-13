@@ -27,8 +27,11 @@ from typing import List, Optional, Tuple
 from webtorrent_movie_server.generate_video_json import generate_video_json
 from webtorrent_movie_server.io import read_utf8, sanitze_path, write_utf8
 from webtorrent_movie_server.lang import lang_label
-from webtorrent_movie_server.settings import (DOMAIN_NAME, STUN_SERVERS,
-                                              TRACKER_ANNOUNCE_LIST)
+from webtorrent_movie_server.settings import (
+    DOMAIN_NAME,
+    STUN_SERVERS,
+    TRACKER_ANNOUNCE_LIST,
+)
 
 # WORK IN PROGRESS
 HERE = os.path.dirname(os.path.abspath(__file__))

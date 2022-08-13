@@ -10,10 +10,14 @@ from fastapi import File, UploadFile
 from fastapi.responses import PlainTextResponse
 
 from webtorrent_movie_server.generate_files import create_webtorrent_files
-from webtorrent_movie_server.settings import (DATA_ROOT, DOMAIN_NAME,
-                                              STUN_SERVERS,
-                                              TRACKER_ANNOUNCE_LIST,
-                                              VIDEO_ROOT, WWW_ROOT)
+from webtorrent_movie_server.settings import (
+    DATA_ROOT,
+    DOMAIN_NAME,
+    STUN_SERVERS,
+    TRACKER_ANNOUNCE_LIST,
+    VIDEO_ROOT,
+    WWW_ROOT,
+)
 from webtorrent_movie_server.io import sanitze_path
 
 CHUNK_SIZE = 1024 * 1024
@@ -51,6 +55,15 @@ def db_list_all_files() -> List[str]:
     return files
 
 
+async def async_download(src: UploadFile, dst: str) -> None:
+    """Downloads a file to the destination."""
+    with open(dst, mode="wb") as filed:
+        while (chunk := await src.read(1024 * 64)) != b"":
+            filed.write(chunk)
+    await src.close()
+    return None
+
+
 async def db_add_video(  # pylint: disable=too-many-branches
     title: str,
     file: UploadFile = File(...),
@@ -70,21 +83,17 @@ async def db_add_video(  # pylint: disable=too-many-branches
     print(f"Uploading file: {file.filename}")
     # Sanitize the titles to be a valid folder name
     video_dir = os.path.join(VIDEO_ROOT, sanitze_path(title))
+    subtitle_dir = os.path.join(video_dir, "subtitles")
     os.makedirs(video_dir, exist_ok=True)
     final_path = os.path.join(video_dir, "vid.mp4")
-    with open(final_path, mode="wb") as filed:
-        while (chunk := await file.read(1024 * 64)) != b"":
-            filed.write(chunk)
-    await file.close()
+    await async_download(file, final_path)
     if subtitles_zip is not None:
         print(f"Uploading subtitles: {subtitles_zip.filename}")
-        with open(os.path.join(video_dir, "subtitles.zip"), mode="wb") as filed:
-            while (chunk := await subtitles_zip.read(1024 * 64)) != b"":
-                filed.write(chunk)
-        await subtitles_zip.close()
+        await async_download(subtitles_zip, os.path.join(video_dir, "subtitles.zip"))
+        # TODO: Make async  # pylint: disable=all
         shutil.unpack_archive(
             os.path.join(video_dir, "subtitles.zip"),
-            os.path.join(video_dir, "subtitles"),
+            os.path.join(subtitle_dir),
         )
         os.remove(os.path.join(video_dir, "subtitles.zip"))
     # TODO: Final check, use ffprobe to check if it is a valid mp4 file that can be  # pylint: disable=fixme

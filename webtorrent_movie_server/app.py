@@ -15,15 +15,27 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 
-from webtorrent_movie_server.db import (db_add_video, db_list_all_files,
-                                        db_query_videos, path_to_url)
-from webtorrent_movie_server.generate_files import (create_webtorrent_files,
-                                                    init_static_files)
-from webtorrent_movie_server.settings import (APP_DB, DATA_ROOT, DOMAIN_NAME,
-                                              LOGFILE, PROJECT_ROOT,
-                                              STUN_SERVERS,
-                                              TRACKER_ANNOUNCE_LIST,
-                                              VIDEO_ROOT, WWW_ROOT)
+from webtorrent_movie_server.db import (
+    db_add_video,
+    db_list_all_files,
+    db_query_videos,
+    path_to_url,
+)
+from webtorrent_movie_server.generate_files import (
+    create_webtorrent_files,
+    init_static_files,
+)
+from webtorrent_movie_server.settings import (
+    APP_DB,
+    DATA_ROOT,
+    DOMAIN_NAME,
+    LOGFILE,
+    PROJECT_ROOT,
+    STUN_SERVERS,
+    TRACKER_ANNOUNCE_LIST,
+    VIDEO_ROOT,
+    WWW_ROOT,
+)
 from webtorrent_movie_server.version import VERSION
 
 print("Starting fastapi webtorrent movie server")
