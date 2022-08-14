@@ -10,7 +10,7 @@ from httpx import AsyncClient
 import secrets
 import shutil
 import threading
-from fastapi.responses import StreamingResponse
+# from fastapi.responses import StreamingResponse
 from typing import Optional
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status, Response
@@ -19,7 +19,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
-from starlette.background import BackgroundTask
+import asyncio
 
 from webtorrent_movie_server.db import (
     db_add_video,
@@ -43,6 +43,8 @@ from webtorrent_movie_server.settings import (
     WWW_ROOT,
 )
 from webtorrent_movie_server.version import VERSION
+
+HTTP_SERVER = AsyncClient(base_url='http://localhost:8000/')
 
 print("Starting fastapi webtorrent movie server")
 
@@ -134,7 +136,6 @@ async def index() -> RedirectResponse:
 async def favicon() -> RedirectResponse:
     """Returns favico file."""
     return RedirectResponse(url="/www/favicon.ico")
-
 
 
 @app.get("/info")
@@ -236,15 +237,15 @@ async def clear() -> PlainTextResponse:
     # app_state.clear()
     # use os.touch to trigger a restart on this server.
     # touch(os.path.join(ROOT, "restart", "restart.file"))
-    shutil.rmtree(VIDEO_ROOT, ignore_errors=True)
+    await asyncio.to_thread(lambda: shutil.rmtree(VIDEO_ROOT, ignore_errors=True))
     os.makedirs(VIDEO_ROOT, exist_ok=True)
     return PlainTextResponse(content="Clear ok")
 
-client = AsyncClient(base_url=f'http://localhost:8000/')
+
 @app.api_route("/{path:path}", methods=["GET"])
-async def proxy_request(path: str,  response: Response):
-    req = client.build_request("GET", path)
-    r = await client.send(req)
+async def proxy_request(path: str, response: Response):
+    req = HTTP_SERVER.build_request("GET", path)
+    r = await HTTP_SERVER.send(req)
     return Response(content=r.content, headers=r.headers, status_code=r.status_code)
 
 
