@@ -3,23 +3,23 @@
 """
 
 # pylint: disable=fixme
-
+import asyncio
 import datetime
 import os
-from httpx import AsyncClient
 import secrets
 import shutil
 import threading
 # from fastapi.responses import StreamingResponse
 from typing import Optional
 
+from httpx import AsyncClient
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
-import asyncio
+
 
 from webtorrent_movie_server.db import (
     db_add_video,
@@ -243,10 +243,14 @@ async def clear() -> PlainTextResponse:
 
 
 @app.api_route("/{path:path}", methods=["GET"])
-async def proxy_request(path: str, response: Response):
+async def proxy_request(path: str):
+    """Proxy requests to the file server."""
     req = HTTP_SERVER.build_request("GET", path)
-    r = await HTTP_SERVER.send(req)
-    return Response(content=r.content, headers=r.headers, status_code=r.status_code)
+    resp = await HTTP_SERVER.send(req)
+    return Response(
+        content=resp.content,
+        headers=resp.headers,
+        status_code=resp.status_code)
 
 
 print("Starting fastapi webtorrent movie server loaded.")
