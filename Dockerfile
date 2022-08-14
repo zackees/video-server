@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --force-yes --no-install-recommends \
 WORKDIR /app
 RUN pip install --upgrade pip
 RUN pip install magic-wormhole
-RUN npm install http-server -g
+RUN npm install http-server pm2 -g
 # for sending files to other devices
 COPY requirements.txt ./requirements.txt
 RUN pip install -r requirements.txt
