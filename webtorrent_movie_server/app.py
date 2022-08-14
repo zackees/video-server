@@ -9,17 +9,22 @@ import os
 import secrets
 import shutil
 import threading
-# from fastapi.responses import StreamingResponse
 from typing import Optional
 
 from httpx import AsyncClient
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status, Response
+import httpx
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status, Request
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 
+# from fastapi.responses import StreamingResponse
+# from starlette.requests import Request
+
+from starlette.background import BackgroundTask
 
 from webtorrent_movie_server.db import (
     db_add_video,
@@ -44,7 +49,7 @@ from webtorrent_movie_server.settings import (
 )
 from webtorrent_movie_server.version import VERSION
 
-HTTP_SERVER = AsyncClient(base_url='http://localhost:8000/')
+HTTP_SERVER = AsyncClient(base_url="http://localhost:8000/")
 
 print("Starting fastapi webtorrent movie server")
 
@@ -242,15 +247,21 @@ async def clear() -> PlainTextResponse:
     return PlainTextResponse(content="Clear ok")
 
 
-@app.api_route("/{path:path}", methods=["GET"])
-async def proxy_request(path: str):
-    """Proxy requests to the file server."""
-    req = HTTP_SERVER.build_request("GET", path)
-    resp = await HTTP_SERVER.send(req)
-    return Response(
-        content=resp.content,
-        headers=resp.headers,
-        status_code=resp.status_code)
+async def _reverse_proxy(request: Request):
+    url = httpx.URL(path=request.url.path, query=request.url.query.encode("utf-8"))
+    rp_req = HTTP_SERVER.build_request(
+        request.method, url, headers=request.headers.raw, content=await request.body()
+    )
+    rp_resp = await HTTP_SERVER.send(rp_req, stream=True)
+    return StreamingResponse(
+        rp_resp.aiter_raw(),
+        status_code=rp_resp.status_code,
+        headers=rp_resp.headers,
+        background=BackgroundTask(rp_resp.aclose),
+    )
+
+
+app.add_route("/{path:path}", _reverse_proxy, ["GET", "POST"])
 
 
 print("Starting fastapi webtorrent movie server loaded.")
