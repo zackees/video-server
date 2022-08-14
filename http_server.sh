@@ -1,8 +1,8 @@
-# if $DATA_ROOT unset then error
+# Get $DATA_ROOT from the environment
+# If $DATA_ROOT is unset
 if [ -z "$DATA_ROOT" ]; then
-    # Error
-    echo "DATA_ROOT is unset"
+    # Error, we need to set $DATA_ROOT
+    echo "ERROR: DATA_ROOT is unset"
     exit 1
 fi
-
-http-server $DATA_ROOT/www -p 80 --cors=* --proxy http://localhost:8000
+http-server $DATA_ROOT/www -p 8000 --cors=*

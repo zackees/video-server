@@ -5,3 +5,4 @@ keyvalue-sqlite==1.0.4
 multipart
 static-ffmpeg
 pathvalidate
+httpx

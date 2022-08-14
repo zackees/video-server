@@ -6,17 +6,20 @@
 
 import datetime
 import os
+from httpx import AsyncClient
 import secrets
 import shutil
 import threading
+from fastapi.responses import StreamingResponse
 from typing import Optional
 
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
+from starlette.background import BackgroundTask
 
 from webtorrent_movie_server.db import (
     db_add_video,
@@ -100,11 +103,6 @@ def authorize(credentials: HTTPBasicCredentials = Depends(security)):
         )
 
 
-# @app.get('/api/access/auth', dependencies=[Depends(authorize)])
-# def auth():
-#    return {"Granted": True}
-
-
 @app.on_event("startup")
 async def startup_event():
     """Event handler for when the app starts up."""
@@ -124,22 +122,6 @@ def shutdown_event():
 # Mount all the static files.
 app.mount("/www", StaticFiles(directory=WWW_ROOT, html=True), "www")
 
-# if os.path.exists(FILES_DIR):
-#    app.mount("/files", StaticFiles(directory='/var/data'), "www")
-
-
-# Redirect to index.html
-# @app.get("/")
-# async def index(request: Request) -> RedirectResponse:
-#    """Returns index.html file"""
-#    params = {item[0]: item[1] for item in request.query_params.multi_items()}
-#    query = ""
-#    for key, value in params.items():
-#        if query == "":
-#            query += "?"
-#        query += f"{key}={value}&"
-#    return RedirectResponse(url=f"/www/index.html{query}", status_code=302)
-
 
 @app.get("/", include_in_schema=False)
 async def index() -> RedirectResponse:
@@ -152,6 +134,7 @@ async def index() -> RedirectResponse:
 async def favicon() -> RedirectResponse:
     """Returns favico file."""
     return RedirectResponse(url="/www/favicon.ico")
+
 
 
 @app.get("/info")
@@ -256,6 +239,13 @@ async def clear() -> PlainTextResponse:
     shutil.rmtree(VIDEO_ROOT, ignore_errors=True)
     os.makedirs(VIDEO_ROOT, exist_ok=True)
     return PlainTextResponse(content="Clear ok")
+
+client = AsyncClient(base_url=f'http://localhost:8000/')
+@app.api_route("/{path:path}", methods=["GET"])
+async def proxy_request(path: str,  response: Response):
+    req = client.build_request("GET", path)
+    r = await client.send(req)
+    return Response(content=r.content, headers=r.headers, status_code=r.status_code)
 
 
 print("Starting fastapi webtorrent movie server loaded.")
