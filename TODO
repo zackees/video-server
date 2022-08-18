@@ -1,0 +1,6 @@
+# Quality selector
+
+* Start timing on index.html Start
+* time diff on onDomContentLoaded
+* if below a threshold, disablle higher video bitrates.
+* see video solution in the ivermectin site for both desktop and mobile
