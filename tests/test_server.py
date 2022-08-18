@@ -7,9 +7,9 @@ import requests
 import uvicorn
 from uvicorn.config import Config
 
-# from webtorrent_movie_server.app import app
+# from video_server.app import app
 
-APP_NAME = "webtorrent_movie_server.app:app"
+APP_NAME = "video_server.app:app"
 MY_IP = "127.0.0.1"
 PORT = 4422  # Arbitrarily chosen.
 

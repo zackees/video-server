@@ -11,9 +11,9 @@ from setuptools import Command, find_packages, setup
 # The directory containing this file
 HERE = os.path.dirname(__file__)
 
-NAME = "webtorrent-movie-server"
+NAME = "video-server"
 DESCRIPTION = "Server to run a webtorrent movie"
-URL = "https://github.com/zackees/webtorrent-movie-server"
+URL = f"https://github.com/zackees/{NAME}"
 EMAIL = "dont@email.me"
 AUTHOR = "Zach Vorhies"
 REQUIRES_PYTHON = ">=3.10.4"
@@ -27,7 +27,7 @@ with open(os.path.join(HERE, "requirements.txt"), encoding="utf-8", mode="rt") a
     REQUIREMENTS = [line.strip() for line in fd.readlines() if line.strip()]
 
 with open(
-    os.path.join(HERE, "webtorrent_movie_server", "version.py"), encoding="utf-8", mode="rt"
+    os.path.join(HERE, "video_server", "version.py"), encoding="utf-8", mode="rt"
 ) as fd:
     for line in fd.readlines():
         if line.startswith("VERSION"):
@@ -96,7 +96,7 @@ setup(
     install_requires=REQUIREMENTS,
     entry_points={
         "console_scripts": [
-            "webtorrent_movie_server = webtorrent_movie_server.cmd:main",
+            "video_server = video_server.cmd:main",
         ],
     },
     packages=find_packages(exclude=["tests", "*.tests", "*.tests.*", "tests.*"]),

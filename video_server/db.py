@@ -9,8 +9,8 @@ from typing import List, Optional
 from fastapi import File, UploadFile
 from fastapi.responses import PlainTextResponse
 
-from webtorrent_movie_server.generate_files import create_webtorrent_files
-from webtorrent_movie_server.settings import (
+from video_server.generate_files import create_webtorrent_files
+from video_server.settings import (
     DATA_ROOT,
     DOMAIN_NAME,
     STUN_SERVERS,
@@ -18,7 +18,7 @@ from webtorrent_movie_server.settings import (
     VIDEO_ROOT,
     WWW_ROOT,
 )
-from webtorrent_movie_server.io import sanitze_path
+from video_server.io import sanitze_path
 
 CHUNK_SIZE = 1024 * 1024
 

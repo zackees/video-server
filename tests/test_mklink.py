@@ -3,7 +3,7 @@ import shutil
 import unittest
 
 
-from webtorrent_movie_server.generate_files import mklink
+from video_server.generate_files import mklink
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))

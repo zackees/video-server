@@ -1,5 +1,5 @@
 """
-Global settings for the webtorrent_movie_server. Could be migrated
+Global settings for the video_server. Could be migrated
 to .env file in the future.
 """
 

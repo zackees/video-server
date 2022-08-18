@@ -1,4 +1,4 @@
 set -e
 cd $( dirname ${BASH_SOURCE[0]})
 source ./activate.sh
-python webtorrent_movie_server/app.py
+python video_server/app.py

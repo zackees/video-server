@@ -1,4 +1,4 @@
 include requirements.txt
 include requirements.testing.txt
-include webtorrent_movie_server/www/index.html
-include webtorrent_movie_server/www/preview.jpg
+include video_server/www/index.html
+include video_server/www/preview.jpg

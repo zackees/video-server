@@ -24,10 +24,10 @@ from distutils.dir_util import copy_tree  # pylint: disable=deprecated-module
 from pprint import pprint
 from typing import List, Optional, Tuple
 
-from webtorrent_movie_server.generate_video_json import generate_video_json
-from webtorrent_movie_server.io import read_utf8, sanitze_path, write_utf8
-from webtorrent_movie_server.lang import lang_label
-from webtorrent_movie_server.settings import (
+from video_server.generate_video_json import generate_video_json
+from video_server.io import read_utf8, sanitze_path, write_utf8
+from video_server.lang import lang_label
+from video_server.settings import (
     DOMAIN_NAME,
     STUN_SERVERS,
     TRACKER_ANNOUNCE_LIST,

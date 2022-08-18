@@ -4,8 +4,8 @@ import sys
 import unittest
 from typing import List
 import shutil
-from webtorrent_movie_server import generate_files
-from webtorrent_movie_server.settings import (
+from video_server import generate_files
+from video_server.settings import (
     DOMAIN_NAME,
     STUN_SERVERS,
     TRACKER_ANNOUNCE_LIST,
