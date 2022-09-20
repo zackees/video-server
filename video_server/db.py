@@ -9,7 +9,8 @@ from typing import List, Optional
 from fastapi import File, UploadFile
 from fastapi.responses import PlainTextResponse
 
-from video_server.generate_files import create_webtorrent_files
+
+from video_server.generate_files import async_create_webtorrent_files
 from video_server.settings import (
     DATA_ROOT,
     DOMAIN_NAME,
@@ -19,6 +20,7 @@ from video_server.settings import (
     WWW_ROOT,
 )
 from video_server.io import sanitze_path
+from video_server.asyncwrap import asyncwrap
 
 CHUNK_SIZE = 1024 * 1024
 
@@ -90,15 +92,15 @@ async def db_add_video(  # pylint: disable=too-many-branches
     if subtitles_zip is not None:
         print(f"Uploading subtitles: {subtitles_zip.filename}")
         await async_download(subtitles_zip, os.path.join(video_dir, "subtitles.zip"))
-        # TODO: Make async  # pylint: disable=all
-        shutil.unpack_archive(
-            os.path.join(video_dir, "subtitles.zip"),
-            os.path.join(subtitle_dir),
-        )
-        os.remove(os.path.join(video_dir, "subtitles.zip"))
+
+        @asyncwrap
+        def async_unpack_subtitles():
+            shutil.unpack_archive(os.path.join(video_dir, "subtitles.zip"), subtitle_dir)
+            os.remove(os.path.join(video_dir, "subtitles.zip"))
+        await async_unpack_subtitles()
     # TODO: Final check, use ffprobe to check if it is a valid mp4 file that can be  # pylint: disable=fixme
     # streamed.
-    create_webtorrent_files(
+    await async_create_webtorrent_files(
         vid_name=title,
         vidfile=final_path,
         domain_name=DOMAIN_NAME,

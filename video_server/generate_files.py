@@ -24,6 +24,8 @@ from distutils.dir_util import copy_tree  # pylint: disable=deprecated-module
 from pprint import pprint
 from typing import List, Optional, Tuple
 
+from video_server.asyncwrap import asyncwrap
+
 from video_server.generate_video_json import generate_video_json
 from video_server.io import read_utf8, sanitze_path, write_utf8
 from video_server.lang import lang_label
@@ -164,6 +166,28 @@ def create_webtorrent_files(
     dst_html = os.path.join(out_dir, "index.html")
     sync_source_file(src_html, dst_html)
     return (html_path, torrent_path)
+
+
+@asyncwrap
+def async_create_webtorrent_files(
+    vid_name: str,
+    vidfile: str,
+    domain_name: str,
+    tracker_announce_list: List[str],
+    stun_servers: str,
+    out_dir: str,
+    chunk_factor: int = 17,
+) -> Tuple[str, str]:
+    """Creates the webtorrent files for a given video file."""
+    return create_webtorrent_files(
+        vid_name=vid_name,
+        vidfile=vidfile,
+        domain_name=domain_name,
+        tracker_announce_list=tracker_announce_list,
+        stun_servers=stun_servers,
+        out_dir=out_dir,
+        chunk_factor=chunk_factor,
+    )
 
 
 def sync_source_file(file: str, out_file: str) -> bool:
