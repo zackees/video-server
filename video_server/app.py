@@ -2,22 +2,23 @@
     Fastapi server
 """
 
-# pylint: disable=fixme
+# pylint: disable=fixme,broad-except
 import asyncio
 import datetime
 import os
-import secrets
 import shutil
 import threading
 from typing import Optional
+import hashlib
+import traceback
 
 from httpx import AsyncClient
 import httpx
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status, Request
+from fastapi import FastAPI, File, UploadFile, Request
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.security import HTTPBasic
 from fastapi.staticfiles import StaticFiles
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 
@@ -52,6 +53,7 @@ from video_server.version import VERSION
 HTTP_SERVER = AsyncClient(base_url="http://localhost:8000/")
 
 print("Starting fastapi webtorrent movie server")
+DISABLE_AUTH = os.environ.get("DISABLE_AUTH", "0") == "1"
 
 app_state = KeyValueSqlite(APP_DB, "app")
 # VIDEO_ROOT = os.path.join(DATA_ROOT, "v")
@@ -71,7 +73,8 @@ app.add_middleware(
 STARTUP_DATETIME = datetime.datetime.now()
 
 PASSWORD = os.environ.get(
-    "WEBTORRENT_MOVIE_SERVER_PASSWORD"
+    "PASSWORD",
+    "68fe2a982d12423ca59b699758684def",
 )  # TODO: implement this  # pylint: disable=fixme
 
 
@@ -93,21 +96,22 @@ def get_current_thread_id() -> int:
     return int(ident)
 
 
-def authorize(credentials: HTTPBasicCredentials = Depends(security)):
-    """Authorize the user."""
-    is_user_ok = secrets.compare_digest(
-        credentials.username, os.getenv("LOGIN", "LOGIN")
-    )
-    is_pass_ok = secrets.compare_digest(
-        credentials.password, os.getenv("PASSWORD", "PASSWORD")
-    )
+def is_authorized(request: Request) -> bool:
+    """Check if the user is authorized."""
+    if DISABLE_AUTH:
+        return True
+    cookie_password = request.cookies.get("password")
+    return digest_equals(cookie_password, PASSWORD)
 
-    if not (is_user_ok and is_pass_ok):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password.",
-            headers={"WWW-Authenticate": "Basic"},
-        )
+
+def digest_equals(password, password_compare) -> bool:
+    """Compare the password."""
+    if password is None:
+        return False
+    return (
+        hashlib.sha256(password.encode()).hexdigest()
+        == hashlib.sha256(password_compare.encode()).hexdigest()
+    )
 
 
 @app.on_event("startup")
@@ -143,9 +147,29 @@ async def favicon() -> RedirectResponse:
     return RedirectResponse(url="/www/favicon.ico")
 
 
+@app.post("/login", tags=["Public"])
+def login(password: str) -> PlainTextResponse:
+    """Use the login password to get a cookie."""
+    try:
+        if not digest_equals(password, PASSWORD):
+            # TODO: Fail after 3 tries
+            resp = PlainTextResponse("Bad login.")
+            resp.delete_cookie(key="password")
+            return resp
+        # Set cookie for password
+        resp = PlainTextResponse("Login successful", status_code=200)
+        resp.set_cookie(key="password", value=PASSWORD, httponly=True)
+        return resp
+    except Exception as exc:
+        stack_trace = traceback.format_exc()
+        return PlainTextResponse(f"{exc}\n\n{stack_trace}:", status_code=500)
+
+
 @app.get("/info")
-async def api_info() -> JSONResponse:
+async def api_info(request: Request) -> JSONResponse:
     """Returns the current time and the number of seconds since the server started."""
+    if not is_authorized(request):
+        return JSONResponse({"error": "Not Authorized"}, status_code=401)
     app_data = app_state.to_dict()
     if "localhost" in DOMAIN_NAME:
         domain_url = f"http://{DOMAIN_NAME}"
@@ -174,7 +198,7 @@ async def api_info() -> JSONResponse:
 
 @app.get("/videos")
 async def list_videos() -> PlainTextResponse:
-    """Uploads a file to the server."""
+    """Reveals the videos that are available."""
     videos = db_query_videos()
     # video_paths = [os.path.join(VIDEO_ROOT, video) for video in videos]
     if "localhost" in DOMAIN_NAME:
@@ -186,28 +210,31 @@ async def list_videos() -> PlainTextResponse:
 
 
 @app.get("/list_all_files")
-def list_all_files() -> JSONResponse:
+def list_all_files(request: Request) -> JSONResponse:
     """List all files in a directory."""
+    if not is_authorized(request):
+        return JSONResponse({"error": "Not Authorized"}, status_code=401)
     urls = [path_to_url(file) for file in db_list_all_files()]
     return JSONResponse(urls)
 
 
 def touch(fname):
     """Touches file"""
-    open(  # pylint: disable=consider-using-with
-        fname, encoding="utf-8", mode="a"
-    ).close()
+    open(fname, encoding="utf-8", mode="a").close()  # pylint: disable=consider-using-with
     os.utime(fname, None)
 
 
 @app.post("/upload")
 async def upload(  # pylint: disable=too-many-branches
+    request: Request,
     title: str,
     file: UploadFile = File(...),
     subtitles_zip: Optional[UploadFile] = File(None),
     do_encode: bool = False,
 ) -> PlainTextResponse:
     """Uploads a file to the server."""
+    if not is_authorized(request):
+        return JSONResponse({"error": "Not Authorized"}, status_code=401)
     # TODO: Use stream files, large files exhaust the ram.
     # This can be fixed by applying the following fix:
     # https://github.com/tiangolo/fastapi/issues/58
@@ -219,27 +246,11 @@ def video_path(video: str) -> str:
     return os.path.join(VIDEO_ROOT, video, "vid.mp4")
 
 
-@app.patch("/regenerate")
-def regenerate() -> JSONResponse:
-    """Regenerate the files."""
-    vid_files = [video_path(v) for v in db_query_videos()]
-    for vidf in vid_files:
-        # get name and split extension
-        name = os.path.splitext(os.path.basename(vidf))[0]
-        create_webtorrent_files(
-            vidfile=vidf,
-            vid_name=name,
-            domain_name=DOMAIN_NAME,
-            tracker_announce_list=TRACKER_ANNOUNCE_LIST,
-            stun_servers=STUN_SERVERS,
-            out_dir=os.path.dirname(vidf),
-        )
-    return JSONResponse(content=vid_files)
-
-
 @app.delete("/clear")
-async def clear() -> PlainTextResponse:
+async def clear(request: Request) -> PlainTextResponse:
     """Clears the stored magnet URI."""
+    if not is_authorized(request):
+        return JSONResponse({"error": "Not Authorized"}, status_code=401)
     # app_state.clear()
     # use os.touch to trigger a restart on this server.
     # touch(os.path.join(ROOT, "restart", "restart.file"))
