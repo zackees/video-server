@@ -34,7 +34,6 @@ from video_server.db import (
     path_to_url,
 )
 from video_server.generate_files import (
-    create_webtorrent_files,
     init_static_files,
 )
 from video_server.settings import (
@@ -43,8 +42,8 @@ from video_server.settings import (
     DOMAIN_NAME,
     LOGFILE,
     PROJECT_ROOT,
-    STUN_SERVERS,
-    TRACKER_ANNOUNCE_LIST,
+    # STUN_SERVERS,
+    # TRACKER_ANNOUNCE_LIST,
     VIDEO_ROOT,
     WWW_ROOT,
 )
@@ -234,7 +233,7 @@ async def upload(  # pylint: disable=too-many-branches
 ) -> PlainTextResponse:
     """Uploads a file to the server."""
     if not is_authorized(request):
-        return JSONResponse({"error": "Not Authorized"}, status_code=401)
+        return PlainTextResponse("error: Not Authorized", status_code=401)
     # TODO: Use stream files, large files exhaust the ram.
     # This can be fixed by applying the following fix:
     # https://github.com/tiangolo/fastapi/issues/58
@@ -250,7 +249,7 @@ def video_path(video: str) -> str:
 async def clear(request: Request) -> PlainTextResponse:
     """Clears the stored magnet URI."""
     if not is_authorized(request):
-        return JSONResponse({"error": "Not Authorized"}, status_code=401)
+        return PlainTextResponse("error: Not Authorized", status_code=401)
     # app_state.clear()
     # use os.touch to trigger a restart on this server.
     # touch(os.path.join(ROOT, "restart", "restart.file"))
