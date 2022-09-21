@@ -89,7 +89,9 @@ async def db_add_video(  # pylint: disable=too-many-branches
     # Sanitize the titles to be a valid folder name
     video_dir = os.path.join(VIDEO_ROOT, sanitze_path(title))
     subtitle_dir = os.path.join(video_dir, "subtitles")
-    os.makedirs(video_dir, exist_ok=True)
+    if os.path.exists(video_dir):
+        return PlainTextResponse(status_code=409, content=f"Video {title} already exists")
+    os.makedirs(video_dir)
     final_path = os.path.join(video_dir, "vid.mp4")
     await async_download(file, final_path)
     if subtitles_zip is not None:

@@ -110,6 +110,19 @@ def encode(videopath: str, crf: int, height: int, outpath: str) -> None:
     print("Generated file: " + outpath)
 
 
+def get_video_height(vidfile: str) -> int:
+    """Gets the video height from the video file."""
+    # use ffprobe to get the height of the video
+    cmd = f'static_ffprobe "{vidfile}" -show_streams 2>&1'
+    stdout = subprocess.check_output(cmd, shell=True)
+    lines = stdout.decode().splitlines()
+    for line in lines:
+        if line.startswith("height"):
+            height = int(line.split("=")[1])
+            return height
+    raise ValueError(f"Missing height in {vidfile}")
+
+
 def create_webtorrent_files(
     vid_name: str,
     vidfile: str,
@@ -123,6 +136,7 @@ def create_webtorrent_files(
     """Generates the webtorrent files for a given video file."""
     assert tracker_announce_list
     os.makedirs(out_dir, exist_ok=True)
+    original_video_height = get_video_height(vidfile)
     html_path = os.path.join(out_dir, "index.html")
     http_type = "http" if "localhost" in domain_name else "https"
     vidpath = sanitze_path(vid_name)
@@ -154,7 +168,14 @@ def create_webtorrent_files(
                 torrent_url=torrent_url,
             )
 
-        task = executor.submit(encoding_task, vidfile, ENCODING_CRF, height, outpath, torrent_path)
+        task = executor.submit(
+            encoding_task,
+            vidfile,
+            ENCODING_CRF,
+            original_video_height if not do_encode else height,
+            outpath,
+            torrent_path,
+        )
         tasks.append(task)
         if not do_encode:
             break  # It's just a copy, so we only need to do one encoding.
