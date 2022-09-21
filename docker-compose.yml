@@ -11,3 +11,5 @@ services:
     environment:
       - DOMAIN_NAME=localhost
       - DATA_ROOT=/app/var/data
+      - ENCODER_QUALITY=ultrafast
+      - ENCODING_HEIGHTS=1080

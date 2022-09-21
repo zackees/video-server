@@ -23,16 +23,20 @@ import warnings
 from distutils.dir_util import copy_tree  # pylint: disable=deprecated-module
 from pprint import pprint
 from typing import List, Optional, Tuple
+from concurrent.futures import ThreadPoolExecutor
 
 from video_server.asyncwrap import asyncwrap
 
-from video_server.generate_video_json import generate_video_json
 from video_server.io import read_utf8, sanitze_path, write_utf8
 from video_server.lang import lang_label
 from video_server.settings import (
     DOMAIN_NAME,
     STUN_SERVERS,
     TRACKER_ANNOUNCE_LIST,
+    ENCODING_HEIGHTS,
+    ENCODING_CRF,
+    NUMBER_OF_ENCODING_THREADS,
+    ENCODER_QUALITY,
 )
 
 # WORK IN PROGRESS
@@ -43,6 +47,8 @@ PLAYER_DIR = os.path.join(HERE, "player")
 HTML_TEMPLATE = read_utf8(os.path.join(HERE, "template.html"))
 REDIRECT_HTML = os.path.join(HERE, "redirect.html")
 
+executor = ThreadPoolExecutor(max_workers=NUMBER_OF_ENCODING_THREADS)
+
 
 def filemd5(filename):
     """Gets the md5 of a file."""
@@ -51,13 +57,6 @@ def filemd5(filename):
         for buf in iter(lambda: filed.read(128 * d.block_size), b""):
             d.update(buf)
     return d.hexdigest()
-
-
-def get_files(out_dir: str) -> Tuple[str, str]:  # pylint: disable=too-many-locals
-    """Gets all the artificate names from the source file."""
-    torrent_path = os.path.join(out_dir, "index.torrent")
-    html_path = os.path.join(out_dir, "index.html")
-    return torrent_path, html_path
 
 
 def mktorrent(
@@ -100,6 +99,17 @@ def query_duration(vidfile: str) -> float:
     return duration
 
 
+def encode(videopath: str, crf: int, height: int, outpath: str) -> None:
+    """Encodes a video"""
+    downmix_stmt = "-ac 1" if height <= 480 else ""
+    # trunc(oh*...) fixes issue with libx264 encoder not liking an add number of width pixels.
+    cmd = f'static_ffmpeg -hide_banner -i "{videopath}" -vf scale="trunc(oh*a/2)*2:{height}" {downmix_stmt} -movflags +faststart -preset {ENCODER_QUALITY} -c:v libx264 -crf {crf} "{outpath}" -y'  # pylint: disable=line-too-long
+    print(f"Running:\n  {cmd}")
+    proc = subprocess.Popen(cmd, shell=True)
+    proc.wait()
+    print("Generated file: " + outpath)
+
+
 def create_webtorrent_files(
     vid_name: str,
     vidfile: str,
@@ -108,28 +118,52 @@ def create_webtorrent_files(
     stun_servers: str,  # pylint: disable=unused-argument
     out_dir: str,
     chunk_factor: int = 17,
+    do_encode: bool = False,
 ) -> Tuple[str, str]:
     """Generates the webtorrent files for a given video file."""
     assert tracker_announce_list
     os.makedirs(out_dir, exist_ok=True)
-    torrent_path, html_path = get_files(out_dir=out_dir)
-    mktorrent(
-        vidfile=vidfile,
-        torrent_path=torrent_path,
-        tracker_announce_list=tracker_announce_list,
-        chunk_factor=chunk_factor,
-    )
+    html_path = os.path.join(out_dir, "index.html")
+    http_type = "http" if "localhost" in domain_name else "https"
+    vidpath = sanitze_path(vid_name)
+    tasks = []
+    for height in ENCODING_HEIGHTS:
+        torrent_path = os.path.join(out_dir, f"{height}.torrent")
+        outpath = os.path.join(out_dir, f"{height}.mp4")
+
+        def encoding_task(vidfile, crf, height, outpath, torrent_path):
+            if do_encode:
+                encode(videopath=vidfile, crf=crf, height=height, outpath=outpath)
+            else:
+                shutil.copy(vidfile, outpath)
+            mktorrent(
+                vidfile=outpath,
+                torrent_path=torrent_path,
+                tracker_announce_list=tracker_announce_list,
+                chunk_factor=chunk_factor,
+            )
+            size_mp4file = os.path.getsize(outpath)
+            duration: float = query_duration(outpath)
+            webseed = f"{http_type}://{domain_name}/v/{vidpath}/{height}.mp4"
+            torrent_url = f"{http_type}://{domain_name}/v/{vidpath}/{height}.torrent"
+            return dict(
+                height=height,
+                duration=duration,
+                size=size_mp4file,
+                file_url=webseed,
+                torrent_url=torrent_url,
+            )
+
+        task = executor.submit(encoding_task, vidfile, ENCODING_CRF, height, outpath, torrent_path)
+        tasks.append(task)
+        if not do_encode:
+            break  # It's just a copy, so we only need to do one encoding.
+
+    completed_vids: list[dict] = [task.result() for task in tasks]
     vidfolder = os.path.dirname(vidfile)
     subtitles_dir = os.path.join(vidfolder, "subtitles")
     print(f"Subtitles dir: {subtitles_dir}")
-    size_mp4file = os.path.getsize(vidfile)
-    duration: float = query_duration(vidfile)
-    http_type = "http" if "localhost" in domain_name else "https"
-    vidpath = sanitze_path(vid_name)
-    torrent_url = f"{http_type}://{domain_name}/v/{vidpath}/index.torrent"
-    webseed = f"{http_type}://{domain_name}/v/{vidpath}/vid.mp4"
     url_slug = f"/v/{vidpath}"
-
     vtt_files = []
     if os.path.exists(subtitles_dir):
         vtt_files = [f for f in os.listdir(subtitles_dir) if f.endswith(".vtt")]
@@ -148,19 +182,23 @@ def create_webtorrent_files(
         for file_vtt in vtt_files
     ]
     print(f"Subtitles: {subtitles}")
-    dict_data = generate_video_json(
-        domain_name=domain_name,
-        vidname=vidpath,
-        url_slug=url_slug,
-        torrentfile=torrent_url,
-        mp4file=webseed,
-        size_mp4file=size_mp4file,
-        duration=duration,
-        subtitles=subtitles,
-    )
+    video_json = {
+        "note": "This is a sample and should be overriden during the video creation process",
+        "name": vidpath,
+        "urlslug": url_slug,
+        "domain": domain_name,
+        "videos": completed_vids,
+        "subtitles": subtitles,
+        "todo": "Let's also have bitchute: <URL> and rumble <URL>",
+        "webtorrent": {
+            "enabled": True,
+            "eager_webseed": True,
+        },
+    }
+
     print("video.json:")
-    pprint(dict_data)
-    json_data = json.dumps(dict_data, indent=4)
+    pprint(video_json)
+    json_data = json.dumps(video_json, indent=4)
     write_utf8(os.path.join(out_dir, "video.json"), contents=json_data)
     src_html = os.path.join(PLAYER_DIR, "index.template.html")
     dst_html = os.path.join(out_dir, "index.html")
@@ -177,6 +215,7 @@ def async_create_webtorrent_files(
     stun_servers: str,
     out_dir: str,
     chunk_factor: int = 17,
+    do_encode: bool = False,
 ) -> Tuple[str, str]:
     """Creates the webtorrent files for a given video file."""
     return create_webtorrent_files(
@@ -187,6 +226,7 @@ def async_create_webtorrent_files(
         stun_servers=stun_servers,
         out_dir=out_dir,
         chunk_factor=chunk_factor,
+        do_encode=do_encode,
     )
 
 
@@ -234,11 +274,7 @@ def main() -> int:
     os.chdir(CONTENT_DIR)
     while True:
         files = os.listdir()
-        files = [
-            f
-            for f in files
-            if f.lower().endswith(".mp4") or f.lower().endswith(".webm")
-        ]
+        files = [f for f in files if f.lower().endswith(".mp4") or f.lower().endswith(".webm")]
         if not files:
             return 0
         # Get the most recent time stamps

@@ -41,9 +41,7 @@ def path_to_url(full_path: str) -> str:
 
 def db_query_videos() -> List[str]:
     """Returns a list of videos in the video directory."""
-    videos = [
-        d for d in os.listdir(VIDEO_ROOT) if os.path.isdir(os.path.join(VIDEO_ROOT, d))
-    ]
+    videos = [d for d in os.listdir(VIDEO_ROOT) if os.path.isdir(os.path.join(VIDEO_ROOT, d))]
     return sorted(videos)
 
 
@@ -70,11 +68,16 @@ async def db_add_video(  # pylint: disable=too-many-branches
     title: str,
     file: UploadFile = File(...),
     subtitles_zip: Optional[UploadFile] = File(None),
+    do_encode: bool = False,
 ) -> PlainTextResponse:
     """Uploads a file to the server."""
-    if not file.filename.lower().endswith(".mp4"):
+    file_ext = os.path.splitext(file.filename)
+    if len(file_ext) != 2:
+        return PlainTextResponse(content=f"Invalid file extension for {file}", status_code=415)
+    ext = file_ext[1].lower()
+    if ext in ["mp4", "mkv", "webm"]:
         return PlainTextResponse(
-            status_code=415, content="Invalid file type, must be mp4"
+            status_code=415, content="Invalid file type, must be mp4, mkv or webm"
         )
     if not os.path.exists(DATA_ROOT):
         return PlainTextResponse(
@@ -97,6 +100,7 @@ async def db_add_video(  # pylint: disable=too-many-branches
         def async_unpack_subtitles():
             shutil.unpack_archive(os.path.join(video_dir, "subtitles.zip"), subtitle_dir)
             os.remove(os.path.join(video_dir, "subtitles.zip"))
+
         await async_unpack_subtitles()
     # TODO: Final check, use ffprobe to check if it is a valid mp4 file that can be  # pylint: disable=fixme
     # streamed.
@@ -107,6 +111,7 @@ async def db_add_video(  # pylint: disable=too-many-branches
         tracker_announce_list=TRACKER_ANNOUNCE_LIST,
         stun_servers=STUN_SERVERS,
         out_dir=video_dir,
+        do_encode=do_encode,
     )
     url = path_to_url(os.path.dirname(final_path))
     return PlainTextResponse(content=f"Video Created!: {url}")

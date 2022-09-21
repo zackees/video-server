@@ -3,16 +3,15 @@
     "name": "test",
     "urlslug": "/v/test",
     "domain": "video-server.onrender.com",
-    "webtorrent": {
-        "torrent": "https://video-server.onrender.com/v/test/index.torrent",
-        "webseed": "https://video-server.onrender.com/v/test/vid.mp4",
-        "size": 19173680,
-        "duration": 59.815
-    },
-    "desktop": {
-        "720": "https://video-server.onrender.com/v/test/vid.mp4"
-    },
-    "mobile": "https://video-server.onrender.com/v/test/vid.mp4",
+    "videos": [
+        {
+            "height": 1080,
+            "duration": 59.815,
+            "size": 19173680,
+            "file_url": "https://video-server.onrender.com/v/test/1080.mp4",
+            "torrent_url": "https://video-server.onrender.com/v/test/1080.torrent"
+        }
+    ],
     "subtitles": [
         {
             "file": "/v/test/subtitles/en.vtt",
@@ -25,5 +24,9 @@
             "label": "Spanish"
         }
     ],
-    "todo": "Let's also have bitchute: <URL> and rumble <URL>"
+    "todo": "Let's also have bitchute: <URL> and rumble <URL>",
+    "webtorrent": {
+        "enabled": true,
+        "eager_webseed": true
+    }
 }

@@ -1,8 +1,9 @@
 
 function initMobileVideo(videoJson) {
-    $videoSource = document.getElementById("video-source")
-    $videoSource.src = videoJson.mobile
-
+    const $videoSource = document.getElementById("video-source")
+    const videos = videoJson.videos;
+    const video = videos[0]
+    $videoSource.src = video.file_url
     // Add videoJson to the dom.
     const $vid = document.getElementById('vid1');
     let isFirst = true

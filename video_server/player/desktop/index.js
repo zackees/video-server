@@ -7,14 +7,15 @@ if (!videoJson) {
 fetch(videoJson, { method: 'GET' })
     .then((response) => {
         response.json().then((videoJson) => {
-            console.log("videoJson:", videoJson)
-            $player = document.getElementById("player");
-            for (const size in videoJson.desktop) {
-                $sourceElement = document.createElement('source');
-                const src = videoJson.desktop[size];
-                $sourceElement.setAttribute('src', src);
+            console.log("\nvideoJson:", videoJson)
+            console.log("\n")
+            const $player = document.getElementById("player");
+            const videos = videoJson.videos;
+            for (const video of videos) {
+                const $sourceElement = document.createElement('source');
+                $sourceElement.setAttribute('src', video.file_url);
                 $sourceElement.setAttribute('type', 'video/mp4');
-                $sourceElement.setAttribute('size', size);
+                //$sourceElement.setAttribute('size', video.height);
                 $player.appendChild($sourceElement);
             }
             let isFirst = true

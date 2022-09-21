@@ -40,8 +40,21 @@ function initWebtorrent(videoJson) {
     // get the current time
     const time = new Date().getTime()
 
-    const TORRENT_URL = webtorrentOptions.torrent
-    const WEBSEED = webtorrentOptions.webseed
+    console.log("videoJson:")
+    console.log(videoJson)
+
+    const videos = videoJson.videos
+
+    let TORRENT_URL = null;
+    let WEBSEED = null;
+
+
+    // Just grab the first one for now.
+    for (let i = 0; i < videos.length; i++) {
+        TORRENT_URL = videos[i].torrent_url
+        WEBSEED = videos[i].file_url
+        break
+    }
 
     // const options = {
     //  announce: ["wss://webtorrent-tracker.onrender.com"],
@@ -185,8 +198,8 @@ function initWebtorrent(videoJson) {
         })
         // Warning! This relies on patched webtorrent ICECOMPLETE_TIMEOUT=1000
         // if aggressive
-        if (webtorrentOptions.aggressive) {
-            console.log("Adding webseed because aggressive mode")
+        if (webtorrentOptions.eager_webseed) {
+            console.log("Adding webseed because eager mode")
             addWebSeed()
         } else {
             setTimeout(() => {
