@@ -29,4 +29,4 @@ for mydir in [DATA_ROOT, WWW_ROOT, VIDEO_ROOT]:
 ENCODING_HEIGHTS = [int(v) for v in os.environ.get("ENCODING_HEIGHTS", "1080,720,480").split(",")]
 ENCODING_CRF = int(os.environ.get("ENCODING_CRF", 28))
 NUMBER_OF_ENCODING_THREADS: int = int(os.environ.get("NUMBER_OF_THREADS", 4))
-ENCODER_QUALITY = os.environ.get("ENCODER_QUALITY", "veryslow")
+ENCODER_PRESET = os.environ.get("ENCODER_PRESET", "veryslow")

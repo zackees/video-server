@@ -31,7 +31,7 @@ from video_server.settings import (
     ENCODING_HEIGHTS,
     ENCODING_CRF,
     NUMBER_OF_ENCODING_THREADS,
-    ENCODER_QUALITY,
+    ENCODER_PRESET,
 )
 
 # WORK IN PROGRESS
@@ -98,7 +98,7 @@ def encode(videopath: str, crf: int, height: int, outpath: str) -> None:
     """Encodes a video"""
     downmix_stmt = "-ac 1" if height <= 480 else ""
     # trunc(oh*...) fixes issue with libx264 encoder not liking an add number of width pixels.
-    cmd = f'static_ffmpeg -hide_banner -i "{videopath}" -vf scale="trunc(oh*a/2)*2:{height}" {downmix_stmt} -movflags +faststart -preset {ENCODER_QUALITY} -c:v libx264 -crf {crf} "{outpath}" -y'  # pylint: disable=line-too-long
+    cmd = f'static_ffmpeg -hide_banner -i "{videopath}" -vf scale="trunc(oh*a/2)*2:{height}" {downmix_stmt} -movflags +faststart -preset {ENCODER_PRESET} -c:v libx264 -crf {crf} "{outpath}" -y'  # pylint: disable=line-too-long
     print(f"Running:\n  {cmd}")
     proc = subprocess.Popen(cmd, shell=True)
     proc.wait()
