@@ -30,3 +30,5 @@ ENCODING_HEIGHTS = [int(v) for v in os.environ.get("ENCODING_HEIGHTS", "1080,720
 ENCODING_CRF = int(os.environ.get("ENCODING_CRF", 28))
 NUMBER_OF_ENCODING_THREADS: int = int(os.environ.get("NUMBER_OF_THREADS", 4))
 ENCODER_PRESET = os.environ.get("ENCODER_PRESET", "veryslow")
+IS_TEST = os.environ.get("IS_TEST", "0") == "1"
+STARTUP_LOCK = os.path.join(DATA_ROOT, "startup.lock")

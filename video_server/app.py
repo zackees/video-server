@@ -12,6 +12,8 @@ from typing import Optional
 import hashlib
 import traceback
 
+from filelock import Timeout, FileLock
+
 from httpx import AsyncClient
 import httpx
 from fastapi import FastAPI, File, UploadFile, Request
@@ -26,12 +28,12 @@ from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 # from starlette.requests import Request
 
 from starlette.background import BackgroundTask
-
 from video_server.db import (
     db_add_video,
     db_list_all_files,
     db_query_videos,
     path_to_url,
+    to_video_dir,
 )
 from video_server.generate_files import (
     init_static_files,
@@ -46,7 +48,10 @@ from video_server.settings import (
     # TRACKER_ANNOUNCE_LIST,
     VIDEO_ROOT,
     WWW_ROOT,
+    IS_TEST,
+    STARTUP_LOCK,
 )
+
 from video_server.version import VERSION
 
 HTTP_SERVER = AsyncClient(base_url="http://localhost:8000/")
@@ -56,6 +61,8 @@ DISABLE_AUTH = os.environ.get("DISABLE_AUTH", "0") == "1"
 
 app_state = KeyValueSqlite(APP_DB, "app")
 # VIDEO_ROOT = os.path.join(DATA_ROOT, "v")
+startup_lock = FileLock(STARTUP_LOCK)
+
 
 app = FastAPI()
 
@@ -114,11 +121,16 @@ def digest_equals(password, password_compare) -> bool:
 
 
 @app.on_event("startup")
-async def startup_event():
+def startup_event():
     """Event handler for when the app starts up."""
     print("Startup event")
     LOG.write("Startup event\n")
-    init_static_files(WWW_ROOT)
+    try:
+        with startup_lock.acquire(timeout=10):
+            init_static_files(WWW_ROOT)
+    except Timeout:
+        print("Startup lock timeout")
+        LOG.write("Startup lock timeout\n")
 
 
 @app.on_event("shutdown")
@@ -217,12 +229,6 @@ def list_all_files(request: Request) -> JSONResponse:
     return JSONResponse(urls)
 
 
-def touch(fname):
-    """Touches file"""
-    open(fname, encoding="utf-8", mode="a").close()  # pylint: disable=consider-using-with
-    os.utime(fname, None)
-
-
 @app.post("/upload")
 async def upload(  # pylint: disable=too-many-branches
     request: Request,
@@ -240,22 +246,28 @@ async def upload(  # pylint: disable=too-many-branches
     return await db_add_video(title, file, subtitles_zip, do_encode=do_encode)
 
 
-def video_path(video: str) -> str:
-    """Returns the path to the video."""
-    return os.path.join(VIDEO_ROOT, video, "vid.mp4")
-
-
-@app.delete("/clear")
-async def clear(request: Request) -> PlainTextResponse:
+@app.delete("/delete")
+async def delete(password: str, video_name: str) -> PlainTextResponse:
     """Clears the stored magnet URI."""
-    if not is_authorized(request):
+    if not digest_equals(password, PASSWORD):
         return PlainTextResponse("error: Not Authorized", status_code=401)
-    # app_state.clear()
-    # use os.touch to trigger a restart on this server.
-    # touch(os.path.join(ROOT, "restart", "restart.file"))
-    await asyncio.to_thread(lambda: shutil.rmtree(VIDEO_ROOT, ignore_errors=True))
-    os.makedirs(VIDEO_ROOT, exist_ok=True)
-    return PlainTextResponse(content="Clear ok")
+    vid_dir = to_video_dir(video_name.strip())
+    if not os.path.exists(vid_dir):
+        return PlainTextResponse(f"error: {vid_dir} does not exist", status_code=404)
+    await asyncio.to_thread(lambda: shutil.rmtree(vid_dir, ignore_errors=True))
+    return PlainTextResponse(content="Deleted ok")
+
+
+if IS_TEST:
+
+    @app.delete("/clear")
+    async def clear(password: str) -> PlainTextResponse:
+        """Clears the stored magnet URI."""
+        if not digest_equals(password, PASSWORD):
+            return PlainTextResponse("error: Not Authorized", status_code=401)
+        await asyncio.to_thread(lambda: shutil.rmtree(VIDEO_ROOT, ignore_errors=True))
+        os.makedirs(VIDEO_ROOT, exist_ok=True)
+        return PlainTextResponse(content="Clear ok")
 
 
 async def _reverse_proxy(request: Request):

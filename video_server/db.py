@@ -64,6 +64,11 @@ async def async_download(src: UploadFile, dst: str) -> None:
     return None
 
 
+def to_video_dir(title: str) -> str:
+    """Returns the video directory for a title."""
+    return os.path.join(VIDEO_ROOT, sanitze_path(title))
+
+
 async def db_add_video(  # pylint: disable=too-many-branches
     title: str,
     file: UploadFile = File(...),
@@ -87,7 +92,7 @@ async def db_add_video(  # pylint: disable=too-many-branches
     # Use the name of the file as the folder for the new content.
     print(f"Uploading file: {file.filename}")
     # Sanitize the titles to be a valid folder name
-    video_dir = os.path.join(VIDEO_ROOT, sanitze_path(title))
+    video_dir = to_video_dir(title)
     subtitle_dir = os.path.join(video_dir, "subtitles")
     if os.path.exists(video_dir):
         return PlainTextResponse(status_code=409, content=f"Video {title} already exists")
