@@ -17,12 +17,10 @@ import json
 import os
 import shutil
 import subprocess
-import sys
-import time
 import warnings
 from distutils.dir_util import copy_tree  # pylint: disable=deprecated-module
 from pprint import pprint
-from typing import List, Optional, Tuple
+from typing import List, Optional
 from concurrent.futures import ThreadPoolExecutor
 
 from video_server.asyncwrap import asyncwrap
@@ -30,9 +28,6 @@ from video_server.asyncwrap import asyncwrap
 from video_server.io import read_utf8, sanitze_path, write_utf8
 from video_server.lang import lang_label
 from video_server.settings import (
-    DOMAIN_NAME,
-    STUN_SERVERS,
-    TRACKER_ANNOUNCE_LIST,
     ENCODING_HEIGHTS,
     ENCODING_CRF,
     NUMBER_OF_ENCODING_THREADS,
@@ -132,7 +127,7 @@ def create_webtorrent_files(
     out_dir: str,
     chunk_factor: int = 17,
     do_encode: bool = False,
-) -> Tuple[str, str]:
+) -> str:
     """Generates the webtorrent files for a given video file."""
     assert tracker_announce_list
     os.makedirs(out_dir, exist_ok=True)
@@ -140,41 +135,44 @@ def create_webtorrent_files(
     html_path = os.path.join(out_dir, "index.html")
     http_type = "http" if "localhost" in domain_name else "https"
     vidpath = sanitze_path(vid_name)
+
+    def encoding_task(vidfile, crf, height, outpath, torrent_path):
+        if do_encode:
+            encode(videopath=vidfile, crf=crf, height=height, outpath=outpath)
+        else:
+            shutil.copy(vidfile, outpath)
+        mktorrent(
+            vidfile=outpath,
+            torrent_path=torrent_path,
+            tracker_announce_list=tracker_announce_list,
+            chunk_factor=chunk_factor,
+        )
+        size_mp4file = os.path.getsize(outpath)
+        duration: float = query_duration(outpath)
+        webseed = f"{http_type}://{domain_name}/v/{vidpath}/{height}.mp4"
+        torrent_url = f"{http_type}://{domain_name}/v/{vidpath}/{height}.torrent"
+        return dict(
+            height=height,
+            duration=duration,
+            size=size_mp4file,
+            file_url=webseed,
+            torrent_url=torrent_url,
+        )
+
     tasks = []
     for height in ENCODING_HEIGHTS:
-        torrent_path = os.path.join(out_dir, f"{height}.torrent")
-        outpath = os.path.join(out_dir, f"{height}.mp4")
-
-        def encoding_task(vidfile, crf, height, outpath, torrent_path):
-            if do_encode:
-                encode(videopath=vidfile, crf=crf, height=height, outpath=outpath)
-            else:
-                shutil.copy(vidfile, outpath)
-            mktorrent(
-                vidfile=outpath,
-                torrent_path=torrent_path,
-                tracker_announce_list=tracker_announce_list,
-                chunk_factor=chunk_factor,
-            )
-            size_mp4file = os.path.getsize(outpath)
-            duration: float = query_duration(outpath)
-            webseed = f"{http_type}://{domain_name}/v/{vidpath}/{height}.mp4"
-            torrent_url = f"{http_type}://{domain_name}/v/{vidpath}/{height}.torrent"
-            return dict(
-                height=height,
-                duration=duration,
-                size=size_mp4file,
-                file_url=webseed,
-                torrent_url=torrent_url,
-            )
-
+        if do_encode:
+            if height > original_video_height:
+                continue  # Don't encode if the height is greater than the original.
+        height = original_video_height if not do_encode else height
+        basename = os.path.join(out_dir, f"{height}")
         task = executor.submit(
             encoding_task,
             vidfile,
             ENCODING_CRF,
-            original_video_height if not do_encode else height,
-            outpath,
-            torrent_path,
+            height,
+            basename + ".mp4",
+            basename + ".torrent",
         )
         tasks.append(task)
         if not do_encode:
@@ -224,7 +222,7 @@ def create_webtorrent_files(
     src_html = os.path.join(PLAYER_DIR, "index.template.html")
     dst_html = os.path.join(out_dir, "index.html")
     sync_source_file(src_html, dst_html)
-    return (html_path, torrent_path)
+    return html_path
 
 
 @asyncwrap
@@ -237,7 +235,7 @@ def async_create_webtorrent_files(
     out_dir: str,
     chunk_factor: int = 17,
     do_encode: bool = False,
-) -> Tuple[str, str]:
+) -> str:
     """Creates the webtorrent files for a given video file."""
     return create_webtorrent_files(
         vid_name=vid_name,
@@ -277,69 +275,3 @@ def init_static_files(out_dir: str) -> None:
             shutil.copy(src, dst)
         else:
             warnings.warn(f"Missing {src}")
-
-
-def main() -> int:
-    """Main entry point, deprecated and will be removed."""
-    # Scan DATA_DIR for movie files
-    # Directory structure is
-    # $DATA_DIR/content - contains *.mp4 or *.webm files
-    # $DATA_DIR - contains the generated files
-    CHUNK_FACTOR = 17  # 128KB, or n^17
-    OUT_DIR = os.environ.get("DATA_DIR", "/var/data")
-    CONTENT_DIR = os.path.join(OUT_DIR, "content")
-    os.makedirs(CONTENT_DIR, exist_ok=True)
-    os.makedirs(OUT_DIR, exist_ok=True)
-    init_static_files(OUT_DIR)
-    prev_cwd = os.getcwd()
-    os.chdir(CONTENT_DIR)
-    while True:
-        files = os.listdir()
-        files = [f for f in files if f.lower().endswith(".mp4") or f.lower().endswith(".webm")]
-        if not files:
-            return 0
-        # Get the most recent time stamps
-        newest_file = sorted(files, key=lambda f: os.path.getmtime(f))[0]
-        # If newest_file is younger than 10 seconds, then wait then try again
-        if os.path.getmtime(newest_file) > time.time() - 10:
-            time.sleep(1)
-            continue
-        break
-    html_str = "<html><body><ul>"
-    for movie_file in files:
-        try:
-            # strip extension
-            vidname = os.path.splitext(os.path.basename(movie_file))[0]
-            iframe_src, torrent_path = create_webtorrent_files(
-                vid_name=vidname,
-                vidfile=movie_file,
-                domain_name=DOMAIN_NAME,
-                tracker_announce_list=TRACKER_ANNOUNCE_LIST,
-                stun_servers=STUN_SERVERS,
-                chunk_factor=CHUNK_FACTOR,
-                out_dir=OUT_DIR,
-            )
-            assert os.path.exists(iframe_src), f"Missing {iframe_src}, skipping"
-            html_str += f"""
-                <li>
-                <h3><a href="{os.path.basename(iframe_src)}">{os.path.basename(iframe_src)}</a></h3>
-                <ul>
-                    <li><a href="{f"content/{os.path.basename(movie_file)}"}">{f"content/{os.path.basename(movie_file)}"}</a></li>
-                    <li><a href="{os.path.basename(torrent_path)}">{os.path.basename(torrent_path)}</a></li>
-                </ul>
-                </li>
-            """
-        except Exception as e:  # pylint: disable=broad-except
-            print(f"Failed to create webtorrent files for {movie_file}: {e}")
-            continue
-    html_str += "</ul></body></html>"
-    # Write the HTML file
-    index_html = os.path.join(OUT_DIR, "index.html")
-    print(f"Writing {index_html}")
-    write_utf8(index_html, contents=html_str)
-    os.chdir(prev_cwd)
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

@@ -5,11 +5,11 @@
     "domain": "video-server.onrender.com",
     "videos": [
         {
-            "height": 1080,
+            "height": 480,
             "duration": 59.815,
             "size": 19173680,
-            "file_url": "https://video-server.onrender.com/v/test/1080.mp4",
-            "torrent_url": "https://video-server.onrender.com/v/test/1080.torrent"
+            "file_url": "https://video-server.onrender.com/v/test/480.mp4",
+            "torrent_url": "https://video-server.onrender.com/v/test/480.torrent"
         }
     ],
     "subtitles": [
