@@ -205,12 +205,13 @@ async def upload(  # pylint: disable=too-many-branches
     title: str,
     file: UploadFile = File(...),
     subtitles_zip: Optional[UploadFile] = File(None),
+    do_encode: bool = False,
 ) -> PlainTextResponse:
     """Uploads a file to the server."""
     # TODO: Use stream files, large files exhaust the ram.
     # This can be fixed by applying the following fix:
     # https://github.com/tiangolo/fastapi/issues/58
-    return await db_add_video(title, file, subtitles_zip)
+    return await db_add_video(title, file, subtitles_zip, do_encode=do_encode)
 
 
 def video_path(video: str) -> str:
