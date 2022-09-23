@@ -5,29 +5,32 @@
 # pylint: disable=fixme,broad-except
 import asyncio
 import datetime
+import hashlib
 import os
 import shutil
 import threading
-from typing import Optional
-import hashlib
+import time
 import traceback
+from typing import Optional
 
-from filelock import Timeout, FileLock
-
-from httpx import AsyncClient
 import httpx
-from fastapi import FastAPI, File, UploadFile, Request
-from fastapi.responses import StreamingResponse
+from fastapi import BackgroundTasks, FastAPI, File, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import (
+    JSONResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    Response,
+    StreamingResponse,
+)
 from fastapi.security import HTTPBasic
 from fastapi.staticfiles import StaticFiles
+from filelock import FileLock, Timeout
+from httpx import AsyncClient
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
-
-# from fastapi.responses import StreamingResponse
-# from starlette.requests import Request
-
 from starlette.background import BackgroundTask
+
+from video_server.asyncwrap import asyncwrap
 from video_server.db import (
     db_add_video,
     db_list_all_files,
@@ -35,24 +38,32 @@ from video_server.db import (
     path_to_url,
     to_video_dir,
 )
-from video_server.generate_files import (
-    init_static_files,
-)
-from video_server.settings import (
+from video_server.generate_files import init_static_files
+from video_server.log import log
+from video_server.rss import rss
+from video_server.settings import (  # STUN_SERVERS,; TRACKER_ANNOUNCE_LIST,
     APP_DB,
     DATA_ROOT,
     DOMAIN_NAME,
+    IS_TEST,
     LOGFILE,
     PROJECT_ROOT,
-    # STUN_SERVERS,
-    # TRACKER_ANNOUNCE_LIST,
+    STARTUP_LOCK,
     VIDEO_ROOT,
     WWW_ROOT,
-    IS_TEST,
-    STARTUP_LOCK,
 )
-
 from video_server.version import VERSION
+
+# from fastapi.responses import StreamingResponse
+# from starlette.requests import Request
+
+
+class RssResponse(Response):  # pylint: disable=too-few-public-methods
+    """Returns an RSS response from a query."""
+
+    media_type = "application/xml"
+    charset = "utf-8"
+
 
 HTTP_SERVER = AsyncClient(base_url="http://localhost:8000/")
 
@@ -220,6 +231,12 @@ async def list_videos() -> PlainTextResponse:
     return PlainTextResponse(content="\n".join(vid_urls))
 
 
+@app.get("/rss")
+async def rss_feed() -> RssResponse:
+    """Returns an RSS feed of the videos."""
+    return RssResponse(rss(channel_name="Video Channel"))
+
+
 @app.get("/list_all_files")
 def list_all_files(request: Request) -> JSONResponse:
     """List all files in a directory."""
@@ -230,9 +247,10 @@ def list_all_files(request: Request) -> JSONResponse:
 
 
 @app.post("/upload")
-async def upload(  # pylint: disable=too-many-branches
+async def upload(  # pylint: disable=too-many-branches,too-many-arguments
     request: Request,
     title: str,
+    description: str,
     file: UploadFile = File(...),
     subtitles_zip: Optional[UploadFile] = File(None),
     do_encode: bool = False,
@@ -243,18 +261,42 @@ async def upload(  # pylint: disable=too-many-branches
     # TODO: Use stream files, large files exhaust the ram.
     # This can be fixed by applying the following fix:
     # https://github.com/tiangolo/fastapi/issues/58
-    return await db_add_video(title, file, subtitles_zip, do_encode=do_encode)
+    return await db_add_video(
+        title=title,
+        description=description,
+        file=file,
+        subtitles_zip=subtitles_zip,
+        do_encode=do_encode,
+    )
 
 
 @app.delete("/delete")
-async def delete(password: str, video_name: str) -> PlainTextResponse:
+async def delete(
+    password: str, title: str, background_tasks: BackgroundTasks
+) -> PlainTextResponse:
+
     """Clears the stored magnet URI."""
     if not digest_equals(password, PASSWORD):
         return PlainTextResponse("error: Not Authorized", status_code=401)
-    vid_dir = to_video_dir(video_name.strip())
+    vid_dir = to_video_dir(title.strip())
     if not os.path.exists(vid_dir):
         return PlainTextResponse(f"error: {vid_dir} does not exist", status_code=404)
-    await asyncio.to_thread(lambda: shutil.rmtree(vid_dir, ignore_errors=True))
+
+    @asyncwrap
+    def delete_files_task():
+        """Deletes the files."""
+        max_tries = 100
+        for retry in range(max_tries):
+            try:
+                shutil.rmtree(vid_dir)
+                break
+            except Exception as exc:
+                log.warning(f"Error deleting {vid_dir}: {exc}")
+                time.sleep(retry)
+        else:
+            log.error(f"Failed to delete {vid_dir} after {max_tries} tries.")
+
+    background_tasks.add_task(delete_files_task)
     return PlainTextResponse(content="Deleted ok")
 
 

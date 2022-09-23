@@ -11,7 +11,9 @@ from filelock import FileLock, Timeout
 from video_server.settings import LOGFILE, LOGFILELOCK
 
 
-LOGGING_FMT = "%(levelname)s %(asctime)s %(filename)s:%(lineno)s->%(funcName)s - %(message)s"
+LOGGING_FMT = (
+    "%(levelname)s %(asctime)s %(filename)s:%(lineno)s->%(funcName)s - %(message)s"
+)
 LOG_FILE_MUTEX = FileLock(LOGFILELOCK)
 
 

@@ -13,3 +13,4 @@ services:
       - DATA_ROOT=/app/var/data
       - ENCODER_PRESET=ultrafast
       - ENCODING_HEIGHTS=1080
+      - PASSWORD=123

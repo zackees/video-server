@@ -9,18 +9,13 @@ from typing import List, Optional
 from fastapi import File, UploadFile
 from fastapi.responses import PlainTextResponse
 
-
-from video_server.generate_files import async_create_webtorrent_files
-from video_server.settings import (
-    DATA_ROOT,
-    DOMAIN_NAME,
-    STUN_SERVERS,
-    TRACKER_ANNOUNCE_LIST,
-    VIDEO_ROOT,
-    WWW_ROOT,
-)
-from video_server.io import sanitze_path
 from video_server.asyncwrap import asyncwrap
+from video_server.generate_files import async_create_webtorrent_files
+from video_server.io import sanitze_path
+from video_server.settings import (DATA_ROOT, DOMAIN_NAME, STUN_SERVERS,
+                                   TRACKER_ANNOUNCE_LIST, VIDEO_ROOT, WWW_ROOT)
+
+from .models import Video
 
 CHUNK_SIZE = 1024 * 1024
 
@@ -41,7 +36,9 @@ def path_to_url(full_path: str) -> str:
 
 def db_query_videos() -> List[str]:
     """Returns a list of videos in the video directory."""
-    videos = [d for d in os.listdir(VIDEO_ROOT) if os.path.isdir(os.path.join(VIDEO_ROOT, d))]
+    videos = [
+        d for d in os.listdir(VIDEO_ROOT) if os.path.isdir(os.path.join(VIDEO_ROOT, d))
+    ]
     return sorted(videos)
 
 
@@ -71,6 +68,7 @@ def to_video_dir(title: str) -> str:
 
 async def db_add_video(  # pylint: disable=too-many-branches
     title: str,
+    description: str,
     file: UploadFile = File(...),
     subtitles_zip: Optional[UploadFile] = File(None),
     do_encode: bool = False,
@@ -78,7 +76,9 @@ async def db_add_video(  # pylint: disable=too-many-branches
     """Uploads a file to the server."""
     file_ext = os.path.splitext(file.filename)
     if len(file_ext) != 2:
-        return PlainTextResponse(content=f"Invalid file extension for {file}", status_code=415)
+        return PlainTextResponse(
+            content=f"Invalid file extension for {file}", status_code=415
+        )
     ext = file_ext[1].lower()
     if ext in ["mp4", "mkv", "webm"]:
         return PlainTextResponse(
@@ -89,13 +89,19 @@ async def db_add_video(  # pylint: disable=too-many-branches
             status_code=500,
             content=f"File upload not enabled because DATA_ROOT {DATA_ROOT} does not exist",
         )
+    if Video.select().where(Video.title == title).exists():
+        return PlainTextResponse(
+            status_code=409, content=f"Video {title} already exists"
+        )
     # Use the name of the file as the folder for the new content.
     print(f"Uploading file: {file.filename}")
     # Sanitize the titles to be a valid folder name
     video_dir = to_video_dir(title)
     subtitle_dir = os.path.join(video_dir, "subtitles")
     if os.path.exists(video_dir):
-        return PlainTextResponse(status_code=409, content=f"Video {title} already exists")
+        return PlainTextResponse(
+            status_code=409, content=f"Video {title} already exists"
+        )
     os.makedirs(video_dir)
     final_path = os.path.join(video_dir, "vid.mp4")
     await async_download(file, final_path)
@@ -105,7 +111,9 @@ async def db_add_video(  # pylint: disable=too-many-branches
 
         @asyncwrap
         def async_unpack_subtitles():
-            shutil.unpack_archive(os.path.join(video_dir, "subtitles.zip"), subtitle_dir)
+            shutil.unpack_archive(
+                os.path.join(video_dir, "subtitles.zip"), subtitle_dir
+            )
             os.remove(os.path.join(video_dir, "subtitles.zip"))
 
         await async_unpack_subtitles()
@@ -121,4 +129,7 @@ async def db_add_video(  # pylint: disable=too-many-branches
         do_encode=do_encode,
     )
     url = path_to_url(os.path.dirname(final_path))
+    Video.create(
+        title=title, url=url, description=description, path=final_path, iframe=url
+    )
     return PlainTextResponse(content=f"Video Created!: {url}")
