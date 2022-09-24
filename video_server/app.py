@@ -2,7 +2,7 @@
     Fastapi server
 """
 
-# pylint: disable=fixme,broad-except
+# pylint: disable=fixme,broad-except,logging-fstring-interpolation
 import asyncio
 import datetime
 import hashlib
@@ -250,8 +250,9 @@ def list_all_files(request: Request) -> JSONResponse:
 async def upload(  # pylint: disable=too-many-branches,too-many-arguments
     request: Request,
     title: str,
-    description: str,
+    description: str = "",
     file: UploadFile = File(...),
+    thumbnail: UploadFile = File(None),
     subtitles_zip: Optional[UploadFile] = File(None),
     do_encode: bool = False,
 ) -> PlainTextResponse:
@@ -265,6 +266,7 @@ async def upload(  # pylint: disable=too-many-branches,too-many-arguments
         title=title,
         description=description,
         file=file,
+        thumbnail=thumbnail,
         subtitles_zip=subtitles_zip,
         do_encode=do_encode,
     )

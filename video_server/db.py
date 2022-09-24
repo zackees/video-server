@@ -2,6 +2,9 @@
 Database abstraction layer.
 """
 
+# pylint: disable=too-many-arguments,too-many-return-statements,too-many-locals,logging-fstring-interpolation
+# flake8: noqa: E231
+
 import os
 import shutil
 from typing import List, Optional
@@ -9,13 +12,22 @@ from typing import List, Optional
 from fastapi import File, UploadFile
 from fastapi.responses import PlainTextResponse
 
+from peewee import ModelSelect  # type: ignore
+
 from video_server.asyncwrap import asyncwrap
 from video_server.generate_files import async_create_webtorrent_files
 from video_server.io import sanitze_path
-from video_server.settings import (DATA_ROOT, DOMAIN_NAME, STUN_SERVERS,
-                                   TRACKER_ANNOUNCE_LIST, VIDEO_ROOT, WWW_ROOT)
+from video_server.settings import (
+    DATA_ROOT,
+    DOMAIN_NAME,
+    STUN_SERVERS,
+    TRACKER_ANNOUNCE_LIST,
+    VIDEO_ROOT,
+    WWW_ROOT,
+)
 
-from .models import Video
+from video_server.models import Video
+from video_server.log import log
 
 CHUNK_SIZE = 1024 * 1024
 
@@ -70,6 +82,7 @@ async def db_add_video(  # pylint: disable=too-many-branches
     title: str,
     description: str,
     file: UploadFile = File(...),
+    thumbnail: UploadFile = File(None),
     subtitles_zip: Optional[UploadFile] = File(None),
     do_encode: bool = False,
 ) -> PlainTextResponse:
@@ -80,33 +93,141 @@ async def db_add_video(  # pylint: disable=too-many-branches
             content=f"Invalid file extension for {file}", status_code=415
         )
     ext = file_ext[1].lower()
-    if ext in ["mp4", "mkv", "webm"]:
-        return PlainTextResponse(
-            status_code=415, content="Invalid file type, must be mp4, mkv or webm"
-        )
+    if do_encode:
+        if ext not in [".mp4", ".mkv", ".webm"]:
+            return PlainTextResponse(
+                status_code=415,
+                content=f"Invalid file type, must be mp4, mkv or webm, instead it was {ext}",
+            )
+    else:
+        if ext != ".mp4":
+            return PlainTextResponse(
+                status_code=415,
+                content=f"Invalid file type, must be mp4, instead it was {ext}",
+            )
     if not os.path.exists(DATA_ROOT):
         return PlainTextResponse(
             status_code=500,
             content=f"File upload not enabled because DATA_ROOT {DATA_ROOT} does not exist",
         )
-    if Video.select().where(Video.title == title).exists():
+    vid: ModelSelect = Video.select().where(Video.title == title)
+    if vid.exists():
         return PlainTextResponse(
             status_code=409, content=f"Video {title} already exists"
         )
-    # Use the name of the file as the folder for the new content.
-    print(f"Uploading file: {file.filename}")
-    # Sanitize the titles to be a valid folder name
     video_dir = to_video_dir(title)
-    subtitle_dir = os.path.join(video_dir, "subtitles")
-    if os.path.exists(video_dir):
-        return PlainTextResponse(
-            status_code=409, content=f"Video {title} already exists"
-        )
     os.makedirs(video_dir)
+    out_thumbnail = os.path.join(video_dir, "thumbnail.jpg")
+    if thumbnail:
+        log.info(f"Thumbnail: {thumbnail.filename}")
+        thumbnail_name_ext = os.path.splitext(thumbnail.filename)
+        if len(thumbnail_name_ext) != 2:
+            return PlainTextResponse(
+                content=f"Invalid file extension for {thumbnail}", status_code=415
+            )
+        thumbnail_ext = thumbnail_name_ext[1].lower()
+        if thumbnail_ext != ".jpg":
+            return PlainTextResponse(
+                status_code=415,
+                content=f"Invalid thumbnail type, must be .jpg, instead it was {thumbnail_ext}",
+            )
+        await async_download(thumbnail, out_thumbnail)
+    else:
+        pixel_data_jpg_1x1_black = [
+            137,
+            80,
+            78,
+            71,
+            13,
+            10,
+            26,
+            10,
+            0,
+            0,
+            0,
+            13,
+            73,
+            72,
+            68,
+            82,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1,
+            8,
+            2,
+            0,
+            0,
+            0,
+            144,
+            119,
+            83,
+            222,
+            0,
+            0,
+            0,
+            1,
+            115,
+            82,
+            71,
+            66,
+            0,
+            174,
+            206,
+            28,
+            233,
+            0,
+            0,
+            0,
+            12,
+            73,
+            68,
+            65,
+            84,
+            24,
+            87,
+            99,
+            136,
+            89,
+            39,
+            8,
+            0,
+            2,
+            133,
+            1,
+            28,
+            26,
+            189,
+            185,
+            242,
+            0,
+            0,
+            0,
+            0,
+            73,
+            69,
+            78,
+            68,
+            174,
+            66,
+            96,
+            130,
+        ]
+        with open(out_thumbnail, "wb") as filed:
+            filed.write(bytes(pixel_data_jpg_1x1_black))
+    # Use the name of the file as the folder for the new content.
+    log.info(f"Uploading file: {file.filename}")
+    # Sanitize the titles to be a valid folder name
+    subtitle_dir = os.path.join(video_dir, "subtitles")
+
     final_path = os.path.join(video_dir, "vid.mp4")
     await async_download(file, final_path)
     if subtitles_zip is not None:
-        print(f"Uploading subtitles: {subtitles_zip.filename}")
+        log.info(f"Uploading subtitles: {subtitles_zip.filename}")
         await async_download(subtitles_zip, os.path.join(video_dir, "subtitles.zip"))
 
         @asyncwrap
