@@ -7,7 +7,10 @@ function initWebtorrent(videoJson) {
     // Enable WebTorrent debugging for now.
     globalThis.localStorage.debug = '*'
     // Black pixel.
-    const poster = videoJson.poster || "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjYGBk/A8AAQkBAubzvZ0AAAAASUVORK5CYII="
+    if (videoJson.poster) {
+        console.warn("Video poster not supported in webtorrent")
+    }
+    const poster = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjYGBk/A8AAQkBAubzvZ0AAAAASUVORK5CYII="
     const webtorrentOptions = videoJson.webtorrent
     const ICE_CONFIGURATION = {
         iceServers: [

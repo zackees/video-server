@@ -136,6 +136,8 @@ def create_webtorrent_files(
     http_type = "http" if "localhost" in domain_name else "https"
     vidpath = sanitze_path(vid_name)
 
+    base_video_path = f"{http_type}://{domain_name}/v/{vidpath}"
+
     def encoding_task(vidfile, crf, height, outpath, torrent_path):
         if do_encode:
             encode(videopath=vidfile, crf=crf, height=height, outpath=outpath)
@@ -149,8 +151,8 @@ def create_webtorrent_files(
         )
         size_mp4file = os.path.getsize(outpath)
         duration: float = query_duration(outpath)
-        webseed = f"{http_type}://{domain_name}/v/{vidpath}/{height}.mp4"
-        torrent_url = f"{http_type}://{domain_name}/v/{vidpath}/{height}.torrent"
+        webseed = f"{base_video_path}/{height}.mp4"
+        torrent_url = f"{base_video_path}/{height}.torrent"
         return dict(
             height=height,
             duration=duration,
@@ -208,6 +210,7 @@ def create_webtorrent_files(
         "domain": domain_name,
         "videos": completed_vids,
         "subtitles": subtitles,
+        "poster": f"{base_video_path}/thumbnail.jpg",
         "todo": "Let's also have bitchute: <URL> and rumble <URL>",
         "webtorrent": {
             "enabled": True,

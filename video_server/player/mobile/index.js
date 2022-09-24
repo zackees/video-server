@@ -6,6 +6,7 @@ function initMobileVideo(videoJson) {
     $videoSource.src = video.file_url
     // Add videoJson to the dom.
     const $vid = document.getElementById('vid1');
+    $vid.setAttribute("poster", videoJson.poster)
     let isFirst = true
     const subtitles = videoJson.subtitles || []
     for (const subtitle of subtitles) {

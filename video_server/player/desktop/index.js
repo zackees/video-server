@@ -16,6 +16,7 @@ fetch(videoJson, { method: 'GET' })
                 $sourceElement.setAttribute('src', video.file_url);
                 $sourceElement.setAttribute('type', 'video/mp4');
                 //$sourceElement.setAttribute('size', video.height);
+                $sourceElement.setAttribute("poster", videoJson.poster)
                 $player.appendChild($sourceElement);
             }
             let isFirst = true
