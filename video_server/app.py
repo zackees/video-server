@@ -53,6 +53,9 @@ from video_server.settings import (  # STUN_SERVERS,; TRACKER_ANNOUNCE_LIST,
     STARTUP_LOCK,
     VIDEO_ROOT,
     WWW_ROOT,
+    DISABLE_AUTH,
+    PASSWORD,
+    DATA_ROOT,
 )
 from video_server.version import VERSION
 
@@ -70,7 +73,7 @@ class RssResponse(Response):  # pylint: disable=too-few-public-methods
 HTTP_SERVER = AsyncClient(base_url="http://localhost:8000/")
 
 print("Starting fastapi webtorrent movie server")
-DISABLE_AUTH = os.environ.get("DISABLE_AUTH", "0") == "1"
+
 
 app_state = KeyValueSqlite(APP_DB, "app")
 # VIDEO_ROOT = os.path.join(DATA_ROOT, "v")
@@ -90,12 +93,6 @@ app.add_middleware(
 )
 
 STARTUP_DATETIME = datetime.datetime.now()
-
-PASSWORD = os.environ.get(
-    "PASSWORD",
-    "68fe2a982d12423ca59b699758684def",
-)  # TODO: implement this  # pylint: disable=fixme
-
 
 LOG = open(LOGFILE, encoding="utf-8", mode="a")  # pylint: disable=consider-using-with
 
@@ -341,6 +338,7 @@ print("Starting fastapi webtorrent movie server loaded.")
 
 if __name__ == "__main__":
     import webbrowser
+    import subprocess
 
     import uvicorn  # type: ignore
 
@@ -348,5 +346,8 @@ if __name__ == "__main__":
 
     # python -m webbrowser -t "http://localhost"
 
+    cmd = f"http-server {DATA_ROOT}/www -p 8000 --cors=*"
+    print(f"Starting http-server: {cmd}")
+    subprocess.Popen(cmd, shell=True)
     # Run the server in debug mode.
     uvicorn.run(app, host="0.0.0.0", port=80)

@@ -52,14 +52,14 @@ def add_bad_login() -> None:
     BadLogin.create()
 
 
-def path_to_url(full_path: str) -> str:
+def path_to_url(path: str) -> str:
     """Returns the path to the www directory."""
     if "localhost" in DOMAIN_NAME:
         domain_url = f"http://{DOMAIN_NAME}"
     else:
         domain_url = f"https://{DOMAIN_NAME}"
-    full_path = full_path.replace("\\", "/")  # Normalize forward slash
-    rel_path = full_path.replace(WWW_ROOT, "")
+    path = path.replace("\\", "/")  # Normalize forward slash
+    rel_path = path.replace(WWW_ROOT, "")
     if rel_path.startswith("/"):
         rel_path = rel_path[1:]
     file = f"{domain_url}/{rel_path}"
@@ -269,7 +269,8 @@ async def db_add_video(  # pylint: disable=too-many-branches
         out_dir=video_dir,
         do_encode=do_encode,
     )
-    url = path_to_url(os.path.dirname(final_path))
+    relpath = os.path.relpath(final_path, DATA_ROOT)  
+    url = path_to_url(os.path.dirname(relpath))
     Video.create(
         title=title, url=url, description=description, path=final_path, iframe=url
     )

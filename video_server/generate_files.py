@@ -33,6 +33,7 @@ from video_server.settings import (
     ENCODING_CRF,
     NUMBER_OF_ENCODING_THREADS,
     ENCODER_PRESET,
+    WEBTORRENT_ENABLED,
 )
 from video_server.log import log
 
@@ -60,6 +61,10 @@ def mktorrent(
     vidfile: str, torrent_path: str, tracker_announce_list: List[str], chunk_factor: int
 ) -> None:
     """Creates a torrent file."""
+    # if windows
+    if os.name == "nt":
+        log.error("mktorrent not supported on windows")
+        return
     if os.path.exists(torrent_path):
         os.remove(torrent_path)
     # Use which to detect whether the mktorrent binary is available.
@@ -204,6 +209,9 @@ def create_webtorrent_files(
         for file_vtt in vtt_files
     ]
     log.info(f"Subtitles: {subtitles}")
+    # if windows
+    
+
     video_json = {
         "note": "This is a sample and should be overriden during the video creation process",
         "name": vidpath,
@@ -214,7 +222,7 @@ def create_webtorrent_files(
         "poster": f"{base_video_path}/thumbnail.jpg",
         "todo": "Let's also have bitchute: <URL> and rumble <URL>",
         "webtorrent": {
-            "enabled": True,
+            "enabled": WEBTORRENT_ENABLED,
             "eager_webseed": True,
         },
     }

@@ -9,7 +9,11 @@ TRACKER_ANNOUNCE_LIST = [
     "wss://webtorrent-tracker.onrender.com",
     "wss://tracker.btorrent.xyz",
 ]
-DOMAIN_NAME = os.environ.get("DOMAIN_NAME", "video-server.onrender.com")
+DEFAULT_DOMAIN = "video-server.onrender.com"
+# if windows
+if os.name == "nt":
+    DEFAULT_DOMAIN = "localhost"  # we launched this from the app.
+DOMAIN_NAME = os.environ.get("DOMAIN_NAME", DEFAULT_DOMAIN)
 STUN_SERVERS = os.environ.get(
     "STUN_SERVERS", '"stun:relay.socket.dev:443", "stun:global.stun.twilio.com:3478"'
 )
@@ -38,3 +42,9 @@ LOGFILE = os.path.join(DATA_ROOT, "log.txt")
 LOGFILELOCK = os.path.join(DATA_ROOT, "log.txt.lock")
 MAX_BAD_LOGINS_RESET_TIME = 60 * 10  # 10 minutes
 MAX_BAD_LOGINS = 10
+PASSWORD = os.environ.get(
+    "PASSWORD",
+    "68fe2a982d12423ca59b699758684def",
+)  # TODO: implement this  # pylint: disable=fixme
+DISABLE_AUTH = os.environ.get("DISABLE_AUTH", "0") == "1"
+WEBTORRENT_ENABLED = os.environ.get("WEBTORRENT_ENABLED", "1" if os.name != "nt" else "0") == "1"

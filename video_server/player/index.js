@@ -131,6 +131,8 @@
         // Test for user search params
         const searchParams = new URLSearchParams(window.location.search)
         const player = searchParams.get('p')
+        const urljson = searchParams.get('d')
+
         if (player) {
             const i = Number.parseInt(player)
             switch (i) {
@@ -148,19 +150,29 @@
             }
         }
 
-        // If device is mobile, use mobile version
-        // test using the user agent string.
-        if (isMobile()) {
-            cb("mobile/index.html", "mobile")
-        } else {
-            fetchNATtype((type) => {
-                // console.log("NAT type: " + type)
-                if (type === "Permissive NAT") {
-                    cb("webtorrent/index.html", "webtorrent")
+        // fetch urljson
+        fetch(urljson)
+            .then(response => response.json())
+            .then(data => {
+                
+                // If device is mobile, use mobile version
+                // test using the user agent string.
+                if (isMobile()) {
+                    cb("mobile/index.html", "mobile")
                 } else {
-                    cb("desktop/index.html", "desktop")
+                    fetchNATtype((type) => {
+                        // console.log("NAT type: " + type)
+                        if (type === "Permissive NAT" && data.webtorrent.enabled) {
+                            cb("webtorrent/index.html", "webtorrent")
+                        } else {
+                            cb("desktop/index.html", "desktop")
+                        }
+                    }, 3000)
                 }
-            }, 3000)
-        }
+
+            })
+            .catch(err => {
+                console.error(err)
+            })
     }
 }());
