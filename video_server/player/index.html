@@ -22,14 +22,32 @@
             width: 100vw;
             height: 100vh;
             border: 0;
+            display: none;
+        }
+
+        #img-poster {
+            object-fit: cover;
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+        }
+
+        #img-poster.hide {
+            display: none;
         }
 
     </style>
 </head>
 
 <body>
-    <iframe id="iframe-target"></iframe>
+    <iframe id="iframe-target">
+    </iframe>
+
     <img id="img-poster" src="https://sp.rmbl.ws/s8/1/_/L/q/V/_LqVf.oq1b.2-small-DEEP-STATE-TRIES-TO-STOP-MI.jpg">
+
+    <!-- src="https://sp.rmbl.ws/s8/1/_/L/q/V/_LqVf.oq1b.2-small-DEEP-STATE-TRIES-TO-STOP-MI.jpg" -->
+
+
 
 </body>
 
@@ -46,6 +64,7 @@
         console.log("iframe: " + src);
         // Pass the url parameters to the player
         document.getElementById("iframe-target").src = src
+        document.getElementById("img-poster").classList.add("hide");
     })
 </script>
 
