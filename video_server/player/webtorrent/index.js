@@ -7,10 +7,11 @@ function initWebtorrent(videoJson) {
     // Enable WebTorrent debugging for now.
     globalThis.localStorage.debug = '*'
     // Black pixel.
-    if (videoJson.poster) {
+    if (videoJson['poster']) {
         console.warn("Video poster not supported in webtorrent")
     }
-    const poster = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjYGBk/A8AAQkBAubzvZ0AAAAASUVORK5CYII="
+    //const poster = videoJson['poster'] || "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjYGBk/A8AAQkBAubzvZ0AAAAASUVORK5CYII="
+    //console.log("poster: " + poster)
     const webtorrentOptions = videoJson.webtorrent
     const ICE_CONFIGURATION = {
         iceServers: [
@@ -111,21 +112,13 @@ function initWebtorrent(videoJson) {
             webseedAdded = true
         }
     }
-
-    const jobId = setInterval(() => {
-        const $vid = document.querySelector('video')
-        if (!$vid) {
-            return
-        }
-        clearInterval(jobId)
-        $vid.poster = poster
-    }, 0);
-
+    const $vid = document.querySelector('video')
+    //$vid.poster = poster
+    //$vid.setAttribute('poster', poster)
     function onVideoLoaded(videoJson) {
         console.log('onVideoLoaded')
         // console.log(document.querySelector("div.container>video"))
         // get the firsts video in the div container with the container class
-        const urlSlug = videoJson.urlslug
         var $vid = document.querySelector("div.container>video")
         let isFirst = true
         const subtitles = videoJson.subtitles || []
@@ -233,7 +226,7 @@ function initWebtorrent(videoJson) {
         // Torrents can contain many files. Let's use the .mp4 file
         const file = torrent.files.find(file => file.name.endsWith('.mp4') || file.name.endsWith('.webm'))
         // Display the file by adding it to the DOM
-        file.appendTo(document.querySelector("div.container"), { autoplay: true })
+        file.renderTo('video#player', { autoplay: true })
         onVideoLoaded(videoJson)
     })
 }

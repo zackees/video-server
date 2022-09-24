@@ -24,6 +24,7 @@
             "label": "Spanish"
         }
     ],
+    "poster": "https://video-server.onrender.com/v/test/thumbnail.jpg",
     "todo": "Let's also have bitchute: <URL> and rumble <URL>",
     "webtorrent": {
         "enabled": true,

@@ -11,6 +11,8 @@ Generates webtorrent files.
 # pylint: disable=too-many-return-statements
 # pylint: disable=too-many-branches
 # pylint: disable=too-many-statements
+# pylint: disable=logging-fstring-interpolation
+# pylint: disable=logging-not-lazy
 
 import hashlib
 import json
@@ -19,7 +21,6 @@ import shutil
 import subprocess
 import warnings
 from distutils.dir_util import copy_tree  # pylint: disable=deprecated-module
-from pprint import pprint
 from typing import List, Optional
 from concurrent.futures import ThreadPoolExecutor
 
@@ -33,6 +34,7 @@ from video_server.settings import (
     NUMBER_OF_ENCODING_THREADS,
     ENCODER_PRESET,
 )
+from video_server.log import log
 
 # WORK IN PROGRESS
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -64,9 +66,8 @@ def mktorrent(
     if not shutil.which("mktorrent"):
         raise OSError("mktorrent not found")
     tracker_announce = "-a " + " -a ".join(tracker_announce_list)
-    # print(os.environ['path'])
     cmd = f'mktorrent "{vidfile}" {tracker_announce} -l {chunk_factor} -o "{torrent_path}"'
-    print(f"Running\n    {cmd}")
+    log.info(f"Running\n    {cmd}")
     # subprocess.check_output(cmd, shell=True)
     os.system(cmd)
     assert os.path.exists(torrent_path), f"Missing expected {torrent_path}"
@@ -99,10 +100,10 @@ def encode(videopath: str, crf: int, height: int, outpath: str) -> None:
     downmix_stmt = "-ac 1" if height <= 480 else ""
     # trunc(oh*...) fixes issue with libx264 encoder not liking an add number of width pixels.
     cmd = f'static_ffmpeg -hide_banner -i "{videopath}" -vf scale="trunc(oh*a/2)*2:{height}" {downmix_stmt} -movflags +faststart -preset {ENCODER_PRESET} -c:v libx264 -crf {crf} "{outpath}" -y'  # pylint: disable=line-too-long
-    print(f"Running:\n  {cmd}")
+    log.info(f"Running:\n  {cmd}")
     proc = subprocess.Popen(cmd, shell=True)
     proc.wait()
-    print("Generated file: " + outpath)
+    log.info("Generated file: " + outpath)
 
 
 def get_video_height(vidfile: str) -> int:
@@ -183,12 +184,12 @@ def create_webtorrent_files(
     completed_vids: list[dict] = [task.result() for task in tasks]
     vidfolder = os.path.dirname(vidfile)
     subtitles_dir = os.path.join(vidfolder, "subtitles")
-    print(f"Subtitles dir: {subtitles_dir}")
+    log.info(f"Subtitles dir: {subtitles_dir}")
     url_slug = f"/v/{vidpath}"
     vtt_files = []
     if os.path.exists(subtitles_dir):
         vtt_files = [f for f in os.listdir(subtitles_dir) if f.endswith(".vtt")]
-    print(f"Found {len(vtt_files)} vtt files")
+    log.info(f"Found {len(vtt_files)} vtt files")
 
     def lang_name(vtt_file: str) -> str:
         """Returns the language name from a vtt file name."""
@@ -202,7 +203,7 @@ def create_webtorrent_files(
         }
         for file_vtt in vtt_files
     ]
-    print(f"Subtitles: {subtitles}")
+    log.info(f"Subtitles: {subtitles}")
     video_json = {
         "note": "This is a sample and should be overriden during the video creation process",
         "name": vidpath,
@@ -218,8 +219,6 @@ def create_webtorrent_files(
         },
     }
 
-    print("video.json:")
-    pprint(video_json)
     json_data = json.dumps(video_json, indent=4)
     write_utf8(os.path.join(out_dir, "video.json"), contents=json_data)
     src_html = os.path.join(PLAYER_DIR, "index.template.html")
