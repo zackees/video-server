@@ -37,6 +37,8 @@ from video_server.db import (
     db_query_videos,
     path_to_url,
     to_video_dir,
+    can_login,
+    add_bad_login,
 )
 from video_server.generate_files import init_static_files
 from video_server.log import log
@@ -172,9 +174,13 @@ async def favicon() -> RedirectResponse:
 @app.post("/login", tags=["Public"])
 def login(password: str) -> PlainTextResponse:
     """Use the login password to get a cookie."""
+    if not can_login():
+        return PlainTextResponse(
+            "Too many failed login attempts. Please try again later."
+        )
     try:
         if not digest_equals(password, PASSWORD):
-            # TODO: Fail after 3 tries
+            add_bad_login()
             resp = PlainTextResponse("Bad login.")
             resp.delete_cookie(key="password")
             return resp

@@ -36,3 +36,5 @@ IS_TEST = os.environ.get("IS_TEST", "0") == "1"
 STARTUP_LOCK = os.path.join(DATA_ROOT, "startup.lock")
 LOGFILE = os.path.join(DATA_ROOT, "log.txt")
 LOGFILELOCK = os.path.join(DATA_ROOT, "log.txt.lock")
+MAX_BAD_LOGINS_RESET_TIME = 60 * 10  # 10 minutes
+MAX_BAD_LOGINS = 10

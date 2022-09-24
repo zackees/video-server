@@ -91,5 +91,11 @@ class Video(BaseModel):
     duration = FloatField(default=0)
 
 
+class BadLogin(BaseModel):
+    """Login model."""
+
+    created = DateTimeField(index=True, default=datetime.now)
+
+
 with FileLock(STARTUP_LOCK).acquire(timeout=10):
-    db_proxy.create_tables([Video], safe=True)
+    db_proxy.create_tables([Video, BadLogin], safe=True)

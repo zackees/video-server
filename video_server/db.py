@@ -8,6 +8,7 @@ Database abstraction layer.
 import os
 import shutil
 from typing import List, Optional
+from datetime import datetime, timedelta
 
 from fastapi import File, UploadFile
 from fastapi.responses import PlainTextResponse
@@ -24,12 +25,31 @@ from video_server.settings import (
     TRACKER_ANNOUNCE_LIST,
     VIDEO_ROOT,
     WWW_ROOT,
+    MAX_BAD_LOGINS,
+    MAX_BAD_LOGINS_RESET_TIME,
 )
 
-from video_server.models import Video
+from video_server.models import Video, db_proxy, BadLogin
 from video_server.log import log
 
 CHUNK_SIZE = 1024 * 1024
+
+
+def can_login() -> bool:
+    """Returns true if the user can attempt to login."""
+    # remove all bad login attempts older than MAX_BAD_LOGINS_RESET_TIME
+    with db_proxy.atomic():
+        oldest_allowed = datetime.now() - timedelta(seconds=MAX_BAD_LOGINS_RESET_TIME)
+        oldest = BadLogin.select().where(BadLogin.created < oldest_allowed)
+        for bad_login in oldest:  # pylint: disable=not-an-iterable
+            bad_login.delete_instance()
+        num_bad_logins = BadLogin.select().count()  # pylint: disable=no-value-for-parameter
+        return num_bad_logins < MAX_BAD_LOGINS
+
+
+def add_bad_login() -> None:
+    """Add a bad login."""
+    BadLogin.create()
 
 
 def path_to_url(full_path: str) -> str:
