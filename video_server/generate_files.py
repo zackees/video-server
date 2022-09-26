@@ -278,7 +278,7 @@ def init_static_files(out_dir: str) -> None:
     demo_dir = os.path.join(out_dir, "demo")
     os.makedirs(demo_dir, exist_ok=True)
     # shutil.copy clobbers files if they already exist.
-    for file in ["subtitles.js", "test.mp4"]:
+    for file in ["test.mp4"]:
         src = os.path.join(TESTS_DATA, file)
         dst = os.path.join(demo_dir, file)
         if os.path.exists(src):
