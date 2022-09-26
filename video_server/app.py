@@ -171,6 +171,8 @@ async def favicon() -> RedirectResponse:
 @app.post("/login", tags=["Public"])
 def login(password: str) -> PlainTextResponse:
     """Use the login password to get a cookie."""
+    if DISABLE_AUTH:
+        return PlainTextResponse("Login ok - auth disabled so any password is ok")
     if not can_login():
         return PlainTextResponse(
             "Too many failed login attempts. Please try again later."
@@ -346,7 +348,7 @@ if __name__ == "__main__":
 
     # python -m webbrowser -t "http://localhost"
 
-    cmd = f"http-server {DATA_ROOT}/www -p 8000 --cors=*"
+    cmd = f"http-server {DATA_ROOT}/www -p 8000 --cors=* -c-1"
     print(f"Starting http-server: {cmd}")
     subprocess.Popen(cmd, shell=True)
     # Run the server in debug mode.
