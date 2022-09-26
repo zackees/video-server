@@ -18,7 +18,6 @@ STUN_SERVERS = os.environ.get(
     "STUN_SERVERS", '"stun:relay.socket.dev:443", "stun:global.stun.twilio.com:3478"'
 )
 
-
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(HERE)
 DATA_ROOT: str = os.environ.get("DATA_ROOT", os.path.join(HERE, "var", "data"))
@@ -46,5 +45,5 @@ PASSWORD = os.environ.get(
     "PASSWORD",
     "68fe2a982d12423ca59b699758684def",
 )  # TODO: implement this  # pylint: disable=fixme
-DISABLE_AUTH = os.environ.get("DISABLE_AUTH", "0") == "1"
+DISABLE_AUTH = os.environ.get("DISABLE_AUTH", "1" if IS_TEST else "0") == "1"
 WEBTORRENT_ENABLED = os.environ.get("WEBTORRENT_ENABLED", "1" if os.name != "nt" else "0") == "1"
