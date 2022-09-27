@@ -66,14 +66,6 @@ def path_to_url(path: str) -> str:
     return file
 
 
-def db_query_videos() -> List[str]:
-    """Returns a list of videos in the video directory."""
-    videos = [
-        d for d in os.listdir(VIDEO_ROOT) if os.path.isdir(os.path.join(VIDEO_ROOT, d))
-    ]
-    return sorted(videos)
-
-
 def db_list_all_files() -> List[str]:
     """Dumps all files in the http directory."""
     files = []
@@ -269,7 +261,7 @@ async def db_add_video(  # pylint: disable=too-many-branches
         out_dir=video_dir,
         do_encode=do_encode,
     )
-    relpath = os.path.relpath(final_path, DATA_ROOT)  
+    relpath = os.path.relpath(final_path, DATA_ROOT)
     url = path_to_url(os.path.dirname(relpath))
     Video.create(
         title=title, url=url, description=description, path=final_path, iframe=url

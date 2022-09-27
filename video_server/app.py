@@ -34,7 +34,6 @@ from video_server.asyncwrap import asyncwrap
 from video_server.db import (
     db_add_video,
     db_list_all_files,
-    db_query_videos,
     path_to_url,
     to_video_dir,
     can_login,
@@ -42,11 +41,10 @@ from video_server.db import (
 )
 from video_server.generate_files import init_static_files
 from video_server.log import log
+from video_server.models import Video
 from video_server.rss import rss
 from video_server.settings import (  # STUN_SERVERS,; TRACKER_ANNOUNCE_LIST,
     APP_DB,
-    DATA_ROOT,
-    DOMAIN_NAME,
     IS_TEST,
     LOGFILE,
     PROJECT_ROOT,
@@ -198,12 +196,7 @@ async def api_info(request: Request) -> JSONResponse:
     if not is_authorized(request):
         return JSONResponse({"error": "Not Authorized"}, status_code=401)
     app_data = app_state.to_dict()
-    if "localhost" in DOMAIN_NAME:
-        domain_url = f"http://{DOMAIN_NAME}"
-    else:
-        domain_url = f"https://{DOMAIN_NAME}"
-    videos = sorted(db_query_videos())
-    links = [f"{domain_url}/v/{video}" for video in videos]
+    links = [video.url for video in Video.select()]
     out = {
         "version": VERSION,
         "Launched at": str(STARTUP_DATETIME),
@@ -218,7 +211,6 @@ async def api_info(request: Request) -> JSONResponse:
         "VIDEO_ROOT": VIDEO_ROOT,
         "LOGFILE": LOGFILE,
         "Links": links,
-        "Videos": videos,
     }
     return JSONResponse(out)
 
@@ -226,14 +218,8 @@ async def api_info(request: Request) -> JSONResponse:
 @app.get("/videos")
 async def list_videos() -> PlainTextResponse:
     """Reveals the videos that are available."""
-    videos = db_query_videos()
-    # video_paths = [os.path.join(VIDEO_ROOT, video) for video in videos]
-    if "localhost" in DOMAIN_NAME:
-        domain_url = f"http://{DOMAIN_NAME}"
-    else:
-        domain_url = f"https://{DOMAIN_NAME}"
-    vid_urls = [f"{domain_url}/v/{video}" for video in videos]
-    return PlainTextResponse(content="\n".join(vid_urls))
+    links = [video.url for video in Video.select()]
+    return PlainTextResponse(content="\n".join(links))
 
 
 @app.get("/rss")
@@ -350,6 +336,6 @@ if __name__ == "__main__":
 
     cmd = f"http-server {DATA_ROOT}/www -p 8000 --cors=* -c-1"
     print(f"Starting http-server: {cmd}")
-    subprocess.Popen(cmd, shell=True)
-    # Run the server in debug mode.
-    uvicorn.run(app, host="0.0.0.0", port=80)
+    with subprocess.Popen(cmd, shell=True):
+        # Run the server in debug mode.
+        uvicorn.run(app, host="0.0.0.0", port=80)

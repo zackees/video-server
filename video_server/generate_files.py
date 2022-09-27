@@ -209,9 +209,6 @@ def create_webtorrent_files(
         for file_vtt in vtt_files
     ]
     log.info(f"Subtitles: {subtitles}")
-    # if windows
-    
-
     video_json = {
         "note": "This is a sample and should be overriden during the video creation process",
         "name": vidpath,

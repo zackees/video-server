@@ -15,14 +15,11 @@ def _rss_item(vid: Video) -> str:
 
     description = cdata(vid.description)
     title = cdata(vid.title)
-    channel_name = cdata("TODO: CHANNEL NAME")
     return f"""    <item>
       <title>{title}</title>
       <pubDate>{vid.published}</pubDate>
       <lastupdated>{vid.updated}</lastupdated>
       <link>{vid.url}</link>
-      <channel_url></channel_url>
-      <channel_name>{channel_name}</channel_name>
       <description>{description}</description>
       <thumbnail>{vid.url}/thumbnail.jpg</thumbnail>
       <dc:creator></dc:creator>
