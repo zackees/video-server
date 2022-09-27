@@ -152,6 +152,11 @@ async def favicon() -> RedirectResponse:
     """Returns favico file."""
     return RedirectResponse(url="/www/favicon.ico")
 
+@app.get('/log')
+async def log_file():
+    logfile = open(LOGFILE, 'r')
+    return StreamingResponse(logfile, media_type='text/plain')
+
 
 @app.post("/login", tags=["Public"])
 def login(password: str) -> PlainTextResponse:
