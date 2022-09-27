@@ -304,7 +304,7 @@ if IS_TEST:
     @app.delete("/clear")
     async def clear(password: str) -> PlainTextResponse:
         """Clears the stored magnet URI."""
-        if not digest_equals(password, PASSWORD):
+        if not DISABLE_AUTH and not digest_equals(password, PASSWORD):
             return PlainTextResponse("error: Not Authorized", status_code=401)
         await asyncio.to_thread(lambda: shutil.rmtree(VIDEO_ROOT, ignore_errors=True))
         os.makedirs(VIDEO_ROOT, exist_ok=True)
