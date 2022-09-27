@@ -294,6 +294,9 @@ async def delete(
         else:
             log.error(f"Failed to delete {vid_dir} after {max_tries} tries.")
 
+    if not Video.select().where(Video.title == title).exists():
+        return PlainTextResponse(f"error: {title} does not exist", status_code=404)
+    Video.delete().where(Video.title == title).execute()
     background_tasks.add_task(delete_files_task)
     return PlainTextResponse(content="Deleted ok")
 
@@ -305,6 +308,7 @@ if IS_TEST:
         """Clears the stored magnet URI."""
         if not DISABLE_AUTH and not digest_equals(password, PASSWORD):
             return PlainTextResponse("error: Not Authorized", status_code=401)
+        Video.delete().execute()
         await asyncio.to_thread(lambda: shutil.rmtree(VIDEO_ROOT, ignore_errors=True))
         os.makedirs(VIDEO_ROOT, exist_ok=True)
         return PlainTextResponse(content="Clear ok")
