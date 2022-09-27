@@ -152,10 +152,6 @@ async def favicon() -> RedirectResponse:
     """Returns favico file."""
     return RedirectResponse(url="/www/favicon.ico")
 
-@app.get('/log')
-async def log_file():
-    logfile = open(LOGFILE, 'r')
-    return StreamingResponse(logfile, media_type='text/plain')
 
 
 @app.post("/login", tags=["Public"])
@@ -313,6 +309,12 @@ if IS_TEST:
         await asyncio.to_thread(lambda: shutil.rmtree(VIDEO_ROOT, ignore_errors=True))
         os.makedirs(VIDEO_ROOT, exist_ok=True)
         return PlainTextResponse(content="Clear ok")
+
+    @app.get('/log')
+    async def log_file():
+        logfile = open(LOGFILE, 'r')
+        return StreamingResponse(logfile, media_type='text/plain')
+
 
 
 async def _reverse_proxy(request: Request):
