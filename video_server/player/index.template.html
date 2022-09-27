@@ -33,6 +33,8 @@
 <iframe id="iframe-target"></iframe>
 
 <script>
+    const searchParams = new URLSearchParams(window.location.search)
+    const autoplay = searchParams.get('autoplay') === 'true'
     let currentPath = window.location.pathname;
     // If current path ends in index.html, remove it
     if (currentPath.endsWith("index.html")) {
@@ -46,7 +48,8 @@
     // Get the player param from the search params
     let player = new URLSearchParams(window.location.search).get("p");
     const playerArg = player ? "&p=" + player : "";
-    const iframeSrc = "/player/index.html?d=" + videoJsonPath + playerArg;
+    const autoplayArg = autoplay ? "&autoplay=true" : "";
+    const iframeSrc = "/player/index.html?d=" + videoJsonPath + playerArg + autoplayArg;
     document.getElementById("iframe-target").src = iframeSrc;
 </script>
 

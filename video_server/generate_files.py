@@ -213,6 +213,7 @@ def create_webtorrent_files(
         "note": "This is a sample and should be overriden during the video creation process",
         "name": vidpath,
         "urlslug": url_slug,
+        "url": base_video_path,
         "domain": domain_name,
         "videos": completed_vids,
         "subtitles": subtitles,

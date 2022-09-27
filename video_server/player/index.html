@@ -58,7 +58,9 @@
     // If found, it will use that param to determine which player to use.
 
     const searchParams = new URLSearchParams(window.location.search)
+    console.log(window.location.search)
     const urljson = searchParams.get('d')
+    const autoplay = searchParams.get('autoplay') === 'true'
 
     const $iframeTarget = document.getElementById('iframe-target')
     const $imgPoster = document.getElementById('img-poster')
@@ -67,19 +69,16 @@
         .then(response => response.json())
         .then(data => {
             console.log(data)
-            const url = data.url
             const poster = data.poster
             $imgPoster.src = poster
-            $iframeTarget.src = url
         })
 
-    // Document click
-    let clicked = false
-    document.addEventListener('click', function (e) {
-        if (clicked) {
+    let loaded = false
+    function loadPlayer() {
+        if (loaded) {
             return
         }
-        clicked = true
+        loaded = true
         fetchPlayerIframeUrl((iframeUrl, clientType) => {
             // Get the current url path to this file
             const src = "/player/" + clientType + "/index.html" + window.location.search
@@ -89,7 +88,14 @@
             $imgPoster.classList.add("hide");
             $iframeTarget.classList.add("show");
         })
-    })
+    }
+    if (autoplay) {
+        loadPlayer()
+    } else {
+        document.addEventListener("click", loadPlayer)
+        document.addEventListener("touchstart", loadPlayer)
+    }
+
 </script>
 
 </html>
