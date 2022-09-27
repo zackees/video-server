@@ -227,6 +227,14 @@ async def rss_feed() -> RssResponse:
     """Returns an RSS feed of the videos."""
     return RssResponse(rss(channel_name="Video Channel"))
 
+@app.get("/json")
+async def rss_feed() -> JSONResponse:
+    """Returns an RSS feed of the videos."""
+    out = []
+    for video in Video.select():
+        out.append(video.asjson())
+    return JSONResponse(out)
+
 
 @app.get("/list_all_files")
 def list_all_files(request: Request) -> JSONResponse:
