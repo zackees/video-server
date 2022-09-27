@@ -23,7 +23,6 @@ def _rss_item(vid: Video) -> str:
       <link>{vid.url}</link>
       <description>{description}</description>
       <thumbnail>{vid.url}/thumbnail.jpg</thumbnail>
-      <dc:creator></dc:creator>
       <duration>{vid.duration}</duration>
       <views>{views}</views>
       <iframe>{vid.iframe}</iframe>
