@@ -25,6 +25,10 @@
             display: none;
         }
 
+        #iframe-target.show {
+            display: block;
+        }
+
         #img-poster {
             object-fit: cover;
             width: 100vw;
@@ -34,37 +38,57 @@
 
         #img-poster.hide {
             display: none;
+            visibility: hidden;
+            pointer-events: none;
         }
 
     </style>
 </head>
 
 <body>
-    <iframe id="iframe-target">
-    </iframe>
-
-    <img id="img-poster" src="https://sp.rmbl.ws/s8/1/_/L/q/V/_LqVf.oq1b.2-small-DEEP-STATE-TRIES-TO-STOP-MI.jpg">
-
-    <!-- src="https://sp.rmbl.ws/s8/1/_/L/q/V/_LqVf.oq1b.2-small-DEEP-STATE-TRIES-TO-STOP-MI.jpg" -->
-
-
-
+    <iframe id="iframe-target" allowfullscreen></iframe>
+    <img id="img-poster" class="hide">
 </body>
 
 <!-- This is the self contained file for player + mp4 in same folder -->
-
 
 <script src="index.js"></script>
 <script>
     // Note, fetchPlayerIframeUrl will search url search params for "&p=N", for N = 0,1,2,3
     // If found, it will use that param to determine which player to use.
-    fetchPlayerIframeUrl((iframeUrl, clientType) => {
-        // Get the current url path to this file
-        const src = "/player/" + clientType + "/index.html" + window.location.search
-        console.log("iframe: " + src);
-        // Pass the url parameters to the player
-        document.getElementById("iframe-target").src = src
-        document.getElementById("img-poster").classList.add("hide");
+
+    const searchParams = new URLSearchParams(window.location.search)
+    const urljson = searchParams.get('d')
+
+    const $iframeTarget = document.getElementById('iframe-target')
+    const $imgPoster = document.getElementById('img-poster')
+
+    fetch(urljson)
+        .then(response => response.json())
+        .then(data => {
+            console.log(data)
+            const url = data.url
+            const poster = data.poster
+            $imgPoster.src = poster
+            $iframeTarget.src = url
+        })
+
+    // Document click
+    let clicked = false
+    document.addEventListener('click', function (e) {
+        if (clicked) {
+            return
+        }
+        clicked = true
+        fetchPlayerIframeUrl((iframeUrl, clientType) => {
+            // Get the current url path to this file
+            const src = "/player/" + clientType + "/index.html" + window.location.search
+            console.log("iframe: " + src);
+            // Pass the url parameters to the player
+            $iframeTarget.src = src
+            $imgPoster.classList.add("hide");
+            $iframeTarget.classList.add("show");
+        })
     })
 </script>
 
