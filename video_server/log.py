@@ -2,7 +2,6 @@
 Instantiates a logging object that can be used to log messages to the console and to a file.
 """
 
-
 import sys
 import logging
 import os
@@ -46,15 +45,18 @@ def log_write_impl(message: str) -> None:
         with LOG_FILE_MUTEX.acquire(timeout=0.1):
             with open(LOGFILE, encoding="utf-8", mode="a") as log_file:
                 log_file.write(message)
+    except Timeout:
+        sys.stderr.write("Could not acquire lock on log file for write, message:\n{message}\n")
+    try:
         # truncate the file if it is larger than 256k
         if os.path.getsize(LOGFILE) > 1024 * 256:
-            with LOG_FILE_MUTEX.acquire(timeout=0.1):
+            with LOG_FILE_MUTEX.acquire(timeout=0):
                 with open(LOGFILE, encoding="utf-8", mode="r") as log_file:
                     lines = log_file.readlines()
                 with open(LOGFILE, encoding="utf-8", mode="w") as log_file:
                     log_file.writelines(lines[-100:])
     except Timeout:
-        sys.stderr.write("Could not acquire lock on log file, message:\n{message}\n")
+        pass
 
 
 def log_read_tail() -> str:

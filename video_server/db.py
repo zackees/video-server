@@ -5,7 +5,6 @@ Database abstraction layer.
 # pylint: disable=too-many-arguments,too-many-return-statements,too-many-locals,logging-fstring-interpolation
 # flake8: noqa: E231
 import asyncio
-from logging.handlers import DEFAULT_SOAP_LOGGING_PORT
 import os
 import shutil
 from typing import List, Optional
