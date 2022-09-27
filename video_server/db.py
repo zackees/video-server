@@ -5,6 +5,7 @@ Database abstraction layer.
 # pylint: disable=too-many-arguments,too-many-return-statements,too-many-locals,logging-fstring-interpolation
 # flake8: noqa: E231
 import asyncio
+from logging.handlers import DEFAULT_SOAP_LOGGING_PORT
 import os
 import shutil
 from typing import List, Optional
@@ -207,7 +208,7 @@ async def db_add_video(  # pylint: disable=too-many-branches
         out_dir=video_dir,
         do_encode=do_encode,
     )
-    relpath = os.path.relpath(final_path, DATA_ROOT)
+    relpath = os.path.relpath(final_path, WWW_ROOT)
     url = path_to_url(os.path.dirname(relpath))
     Video.create(
         title=title, url=url, description=description, path=final_path, iframe=url
