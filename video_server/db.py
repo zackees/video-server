@@ -129,108 +129,7 @@ async def db_add_video(  # pylint: disable=too-many-branches
         )
     video_dir = to_video_dir(title)
     os.makedirs(video_dir)
-    out_thumbnail = os.path.join(video_dir, "thumbnail.jpg")
-    if thumbnail:
-        log.info(f"Thumbnail: {thumbnail.filename}")
-        thumbnail_name_ext = os.path.splitext(thumbnail.filename)
-        if len(thumbnail_name_ext) != 2:
-            return PlainTextResponse(
-                content=f"Invalid file extension for {thumbnail}", status_code=415
-            )
-        thumbnail_ext = thumbnail_name_ext[1].lower()
-        if thumbnail_ext != ".jpg":
-            return PlainTextResponse(
-                status_code=415,
-                content=f"Invalid thumbnail type, must be .jpg, instead it was {thumbnail_ext}",
-            )
-        await async_download(thumbnail, out_thumbnail)
-    else:
-        pixel_data_jpg_1x1_black = [
-            137,
-            80,
-            78,
-            71,
-            13,
-            10,
-            26,
-            10,
-            0,
-            0,
-            0,
-            13,
-            73,
-            72,
-            68,
-            82,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            1,
-            8,
-            2,
-            0,
-            0,
-            0,
-            144,
-            119,
-            83,
-            222,
-            0,
-            0,
-            0,
-            1,
-            115,
-            82,
-            71,
-            66,
-            0,
-            174,
-            206,
-            28,
-            233,
-            0,
-            0,
-            0,
-            12,
-            73,
-            68,
-            65,
-            84,
-            24,
-            87,
-            99,
-            136,
-            89,
-            39,
-            8,
-            0,
-            2,
-            133,
-            1,
-            28,
-            26,
-            189,
-            185,
-            242,
-            0,
-            0,
-            0,
-            0,
-            73,
-            69,
-            78,
-            68,
-            174,
-            66,
-            96,
-            130,
-        ]
-        with open(out_thumbnail, "wb") as filed:
-            filed.write(bytes(pixel_data_jpg_1x1_black))
+
     # Use the name of the file as the folder for the new content.
     log.info(f"Uploading file: {file.filename}")
     # Sanitize the titles to be a valid folder name
@@ -250,6 +149,54 @@ async def db_add_video(  # pylint: disable=too-many-branches
             os.remove(os.path.join(video_dir, "subtitles.zip"))
 
         await async_unpack_subtitles()
+
+    # Make thumbnail
+    out_thumbnail = os.path.join(video_dir, "thumbnail.jpg")
+    if thumbnail:
+        log.info(f"Thumbnail: {thumbnail.filename}")
+        thumbnail_name_ext = os.path.splitext(thumbnail.filename)
+        if len(thumbnail_name_ext) != 2:
+            return PlainTextResponse(
+                content=f"Invalid file extension for {thumbnail}", status_code=415
+            )
+        thumbnail_ext = thumbnail_name_ext[1].lower()
+        if thumbnail_ext != ".jpg":
+            return PlainTextResponse(
+                status_code=415,
+                content=f"Invalid thumbnail type, must be .jpg, instead it was {thumbnail_ext}",
+            )
+        await async_download(thumbnail, out_thumbnail)
+    else:
+        # Make thumbnail
+        cmd = [
+            "static_ffmpeg",
+            "-i",
+            final_path,
+            "-vf",
+            "select=eq(n\\,0)",
+            "-q:v",
+            "3",
+            out_thumbnail,
+        ]
+        # os.system('ffmpeg -i inputfile.mkv -vf "select=eq(n\,0)" -q:v 3 output_image.jpg')
+        log.info("Creating thumbnail with cmd:\n  %s", cmd)
+        import asyncio
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await proc.communicate()
+        if proc.returncode != 0:
+            log.error("Failed to create thumbnail")
+            log.error("stdout: %s", stdout)
+            log.error("stderr: %s", stderr)
+            return PlainTextResponse(
+                status_code=500,
+                content="Failed to create thumbnail",
+            )
+        log.info("Created thumbnail")
+
     # TODO: Final check, use ffprobe to check if it is a valid mp4 file that can be  # pylint: disable=fixme
     # streamed.
     await async_create_webtorrent_files(
