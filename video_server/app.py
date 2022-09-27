@@ -222,13 +222,24 @@ async def list_videos() -> PlainTextResponse:
     return PlainTextResponse(content="\n".join(links))
 
 
+@app.put("/add_view/{id}")
+async def add_view(id: int) -> PlainTextResponse:  # pylint: disable=redefined-builtin,invalid-name
+    """Adds a view to the app state."""
+    try:
+        Video.update(views=Video.views + 1).where(Video.id == id).execute()
+        return PlainTextResponse("View added")
+    except Exception as exc:
+        return PlainTextResponse(f"Error adding view because {exc}")
+
+
 @app.get("/rss")
 async def rss_feed() -> RssResponse:
     """Returns an RSS feed of the videos."""
     return RssResponse(rss(channel_name="Video Channel"))
 
+
 @app.get("/json")
-async def rss_feed() -> JSONResponse:
+async def json_feed() -> JSONResponse:
     """Returns an RSS feed of the videos."""
     out = []
     for video in Video.select():

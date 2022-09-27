@@ -16,6 +16,7 @@ def _rss_item(vid: Video) -> str:
     description = cdata(vid.description)
     title = cdata(vid.title)
     return f"""    <item>
+      <id>{vid.id}</id>
       <title>{title}</title>
       <pubDate>{vid.published}</pubDate>
       <lastupdated>{vid.updated}</lastupdated>
@@ -25,7 +26,6 @@ def _rss_item(vid: Video) -> str:
       <dc:creator></dc:creator>
       <duration>{vid.duration}</duration>
       <views>{views}</views>
-      <host></host>
       <iframe>{vid.iframe}</iframe>
     </item>
 """
