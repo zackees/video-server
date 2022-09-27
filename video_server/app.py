@@ -70,7 +70,7 @@ class RssResponse(Response):  # pylint: disable=too-few-public-methods
 
 HTTP_SERVER = AsyncClient(base_url="http://localhost:8000/")
 
-print("Starting fastapi webtorrent movie server")
+log.info("Starting fastapi webtorrent movie server")
 
 
 app_state = KeyValueSqlite(APP_DB, "app")
@@ -122,18 +122,18 @@ def digest_equals(password, password_compare) -> bool:
 @app.on_event("startup")
 def startup_event():
     """Event handler for when the app starts up."""
-    print("Startup event")
+    log.info("Startup event")
     try:
         with startup_lock.acquire(timeout=10):
             init_static_files(WWW_ROOT)
     except Timeout:
-        print("Startup lock timeout")
+        log.error("Startup lock timeout")
 
 
 @app.on_event("shutdown")
 def shutdown_event():
     """Event handler for when the app shuts down."""
-    print("Application shutdown")
+    log.info("Application shutdown")
 
 
 # Mount all the static files.
@@ -334,8 +334,6 @@ async def _reverse_proxy(request: Request):
 # http web server.
 app.add_route("/{path:path}", _reverse_proxy, ["GET", "POST"])
 
-
-print("Starting fastapi webtorrent movie server loaded.")
 
 if __name__ == "__main__":
     import webbrowser
