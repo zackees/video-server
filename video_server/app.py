@@ -153,7 +153,6 @@ async def favicon() -> RedirectResponse:
     return RedirectResponse(url="/www/favicon.ico")
 
 
-
 @app.post("/login", tags=["Public"])
 def login(password: str) -> PlainTextResponse:
     """Use the login password to get a cookie."""
@@ -312,9 +311,9 @@ if IS_TEST:
 
     @app.get('/log')
     async def log_file():
-        logfile = open(LOGFILE, 'r')
+        """Returns the log file."""
+        logfile = open(LOGFILE, encoding='utf-8', mode='r')
         return StreamingResponse(logfile, media_type='text/plain')
-
 
 
 async def _reverse_proxy(request: Request):

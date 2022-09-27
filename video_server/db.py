@@ -4,7 +4,7 @@ Database abstraction layer.
 
 # pylint: disable=too-many-arguments,too-many-return-statements,too-many-locals,logging-fstring-interpolation
 # flake8: noqa: E231
-
+import asyncio
 import os
 import shutil
 from typing import List, Optional
@@ -180,7 +180,6 @@ async def db_add_video(  # pylint: disable=too-many-branches
         ]
         # os.system('ffmpeg -i inputfile.mkv -vf "select=eq(n\,0)" -q:v 3 output_image.jpg')
         log.info("Creating thumbnail with cmd:\n  %s", cmd)
-        import asyncio
         proc = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
