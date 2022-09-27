@@ -273,9 +273,8 @@ async def upload(  # pylint: disable=too-many-branches,too-many-arguments
 async def delete(
     password: str, title: str, background_tasks: BackgroundTasks
 ) -> PlainTextResponse:
-
     """Clears the stored magnet URI."""
-    if not digest_equals(password, PASSWORD):
+    if not DISABLE_AUTH and not digest_equals(password, PASSWORD):
         return PlainTextResponse("error: Not Authorized", status_code=401)
     vid_dir = to_video_dir(title.strip())
     if not os.path.exists(vid_dir):
