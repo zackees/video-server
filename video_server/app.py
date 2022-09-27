@@ -92,15 +92,6 @@ app.add_middleware(
 
 STARTUP_DATETIME = datetime.datetime.now()
 
-LOG = open(LOGFILE, encoding="utf-8", mode="a")  # pylint: disable=consider-using-with
-
-
-def log_error(msg: str) -> None:
-    """Logs an error to the print stream."""
-    # print(msg)
-    print(msg)
-    LOG.write(msg + "\n")
-
 
 def get_current_thread_id() -> int:
     """Return the current thread id."""
@@ -132,21 +123,17 @@ def digest_equals(password, password_compare) -> bool:
 def startup_event():
     """Event handler for when the app starts up."""
     print("Startup event")
-    LOG.write("Startup event\n")
     try:
         with startup_lock.acquire(timeout=10):
             init_static_files(WWW_ROOT)
     except Timeout:
         print("Startup lock timeout")
-        LOG.write("Startup lock timeout\n")
 
 
 @app.on_event("shutdown")
 def shutdown_event():
     """Event handler for when the app shuts down."""
     print("Application shutdown")
-    LOG.write("Application shutdown\n")
-    LOG.close()
 
 
 # Mount all the static files.
@@ -337,7 +324,8 @@ async def _reverse_proxy(request: Request):
         background=BackgroundTask(rp_resp.aclose),
     )
 
-
+# All the routes that aren't covered by app are forwareded to the
+# http web server.
 app.add_route("/{path:path}", _reverse_proxy, ["GET", "POST"])
 
 
