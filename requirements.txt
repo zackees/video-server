@@ -9,3 +9,4 @@ httpx
 filelock
 peewee==3.15.2
 peewee_extra_fields==2.8.2
+Pillow

@@ -46,7 +46,9 @@ def log_write_impl(message: str) -> None:
             with open(LOGFILE, encoding="utf-8", mode="a") as log_file:
                 log_file.write(message)
     except Timeout:
-        sys.stderr.write("Could not acquire lock on log file for write, message:\n{message}\n")
+        sys.stderr.write(
+            "Could not acquire lock on log file for write, message:\n{message}\n"
+        )
     try:
         # truncate the file if it is larger than 256k
         if os.path.getsize(LOGFILE) > 1024 * 256:

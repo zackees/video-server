@@ -26,7 +26,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from video_server.asyncwrap import asyncwrap
 
-from video_server.io import read_utf8, sanitze_path, write_utf8
+from video_server.io import read_utf8, sanitize_path, write_utf8
 from video_server.lang import lang_label
 from video_server.settings import (
     ENCODING_HEIGHTS,
@@ -140,7 +140,7 @@ def create_webtorrent_files(
     original_video_height = get_video_height(vidfile)
     html_path = os.path.join(out_dir, "index.html")
     http_type = "http" if "localhost" in domain_name else "https"
-    vidpath = sanitze_path(vid_name)
+    vidpath = sanitize_path(vid_name)
 
     base_video_path = f"{http_type}://{domain_name}/v/{vidpath}"
 

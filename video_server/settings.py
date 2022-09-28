@@ -46,5 +46,7 @@ PASSWORD = os.environ.get(
     "68fe2a982d12423ca59b699758684def",
 )  # TODO: implement this  # pylint: disable=fixme
 DISABLE_AUTH = os.environ.get("DISABLE_AUTH", "1" if IS_TEST else "0") == "1"
-WEBTORRENT_ENABLED = os.environ.get("WEBTORRENT_ENABLED", "1" if os.name != "nt" else "0") == "1"
+WEBTORRENT_ENABLED = (
+    os.environ.get("WEBTORRENT_ENABLED", "1" if os.name != "nt" else "0") == "1"
+)
 WEBTORRENT_CHUNK_FACTOR = int(os.environ.get("WEBTORRENT_CHUNK_FACTOR", "17"))

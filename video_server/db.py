@@ -2,22 +2,22 @@
 Database abstraction layer.
 """
 
-# pylint: disable=too-many-arguments,too-many-return-statements,too-many-locals,logging-fstring-interpolation
+# pylint: disable=too-many-arguments,too-many-return-statements,too-many-locals,logging-fstring-interpolation,disable=no-value-for-parameter
 # flake8: noqa: E231
 import asyncio
 import os
 import shutil
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from datetime import datetime, timedelta
 
 from fastapi import File, UploadFile
 from fastapi.responses import PlainTextResponse
-
+from PIL import Image  # type: ignore
 from peewee import ModelSelect  # type: ignore
 
 from video_server.asyncwrap import asyncwrap
 from video_server.generate_files import async_create_webtorrent_files
-from video_server.io import sanitze_path
+from video_server.io import sanitize_path
 from video_server.settings import (
     DATA_ROOT,
     DOMAIN_NAME,
@@ -27,13 +27,14 @@ from video_server.settings import (
     WWW_ROOT,
     MAX_BAD_LOGINS,
     MAX_BAD_LOGINS_RESET_TIME,
-    WEBTORRENT_CHUNK_FACTOR
+    WEBTORRENT_CHUNK_FACTOR,
 )
 
 from video_server.models import Video, db_proxy, BadLogin
 from video_server.log import log
 
 CHUNK_SIZE = 1024 * 1024
+
 
 def can_login() -> bool:
     """Returns true if the user can attempt to login."""
@@ -43,7 +44,9 @@ def can_login() -> bool:
         oldest = BadLogin.select().where(BadLogin.created < oldest_allowed)
         for bad_login in oldest:  # pylint: disable=not-an-iterable
             bad_login.delete_instance()
-        num_bad_logins = BadLogin.select().count()  # pylint: disable=no-value-for-parameter
+        num_bad_logins = (
+            BadLogin.select().count()
+        )
         return num_bad_logins < MAX_BAD_LOGINS
 
 
@@ -87,7 +90,14 @@ async def async_download(src: UploadFile, dst: str) -> None:
 
 def to_video_dir(title: str) -> str:
     """Returns the video directory for a title."""
-    return os.path.join(VIDEO_ROOT, sanitze_path(title))
+    return os.path.join(VIDEO_ROOT, sanitize_path(title))
+
+
+def get_image_size(fname) -> Tuple[int, int]:
+    """Returns the width and the height of the image"""
+    with Image.open(fname) as img:
+        width, height = img.size
+    return width, height
 
 
 async def db_add_video(  # pylint: disable=too-many-branches
@@ -166,6 +176,16 @@ async def db_add_video(  # pylint: disable=too-many-branches
                 content=f"Invalid thumbnail type, must be .jpg, instead it was {thumbnail_ext}",
             )
         await async_download(thumbnail, out_thumbnail)
+
+        thumbnail_width, thumbnail_height = get_image_size(out_thumbnail)
+        if thumbnail_width > 1280 or thumbnail_height > 720:
+            return PlainTextResponse(
+                status_code=415,
+                content=(
+                    f"Invalid thumbnail size, can't be larger than 1280x720, instead it was "
+                    f"{thumbnail_width}x{thumbnail_height}"
+                ),
+            )
     else:
         # Make thumbnail
         cmd = [

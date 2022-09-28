@@ -5,7 +5,7 @@ Input output.
 from pathvalidate import sanitize_filepath
 
 
-def sanitze_path(path: str) -> str:
+def sanitize_path(path: str) -> str:
     """Sanitizes a path."""
     return str(
         sanitize_filepath(path)  # type: ignore

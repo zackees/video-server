@@ -210,7 +210,9 @@ async def list_videos() -> PlainTextResponse:
 
 
 @app.put("/add_view/{id}")
-async def add_view(id: int) -> PlainTextResponse:  # pylint: disable=redefined-builtin,invalid-name
+async def add_view(
+    id: int,  # pylint: disable=redefined-builtin,invalid-name
+) -> PlainTextResponse:
     """Adds a view to the app state."""
     try:
         Video.update(views=Video.views + 1).where(Video.id == id).execute()
@@ -313,11 +315,11 @@ if IS_TEST:
         os.makedirs(VIDEO_ROOT, exist_ok=True)
         return PlainTextResponse(content="Clear ok")
 
-    @app.get('/log')
+    @app.get("/log")
     async def log_file():
         """Returns the log file."""
-        logfile = open(LOGFILE, encoding='utf-8', mode='r')
-        return StreamingResponse(logfile, media_type='text/plain')
+        logfile = open(LOGFILE, encoding="utf-8", mode="r")
+        return StreamingResponse(logfile, media_type="text/plain")
 
 
 async def _reverse_proxy(request: Request):
@@ -332,6 +334,7 @@ async def _reverse_proxy(request: Request):
         headers=rp_resp.headers,
         background=BackgroundTask(rp_resp.aclose),
     )
+
 
 # All the routes that aren't covered by app are forwareded to the
 # http web server.
