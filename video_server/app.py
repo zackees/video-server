@@ -308,7 +308,7 @@ if IS_TEST:
         """Clears the stored magnet URI."""
         if not DISABLE_AUTH and not digest_equals(password, PASSWORD):
             return PlainTextResponse("error: Not Authorized", status_code=401)
-        Video.delete().execute()
+        Video.delete().execute()  # pylint: disable=no-value-for-parameter
         await asyncio.to_thread(lambda: shutil.rmtree(VIDEO_ROOT, ignore_errors=True))
         os.makedirs(VIDEO_ROOT, exist_ok=True)
         return PlainTextResponse(content="Clear ok")

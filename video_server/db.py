@@ -27,13 +27,13 @@ from video_server.settings import (
     WWW_ROOT,
     MAX_BAD_LOGINS,
     MAX_BAD_LOGINS_RESET_TIME,
+    WEBTORRENT_CHUNK_FACTOR
 )
 
 from video_server.models import Video, db_proxy, BadLogin
 from video_server.log import log
 
 CHUNK_SIZE = 1024 * 1024
-
 
 def can_login() -> bool:
     """Returns true if the user can attempt to login."""
@@ -195,7 +195,6 @@ async def db_add_video(  # pylint: disable=too-many-branches
                 content="Failed to create thumbnail",
             )
         log.info("Created thumbnail")
-
     # TODO: Final check, use ffprobe to check if it is a valid mp4 file that can be  # pylint: disable=fixme
     # streamed.
     await async_create_webtorrent_files(
@@ -205,6 +204,7 @@ async def db_add_video(  # pylint: disable=too-many-branches
         tracker_announce_list=TRACKER_ANNOUNCE_LIST,
         stun_servers=STUN_SERVERS,
         out_dir=video_dir,
+        chunk_factor=WEBTORRENT_CHUNK_FACTOR,
         do_encode=do_encode,
     )
     relpath = os.path.relpath(final_path, WWW_ROOT)
