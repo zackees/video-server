@@ -339,20 +339,3 @@ async def _reverse_proxy(request: Request):
 # All the routes that aren't covered by app are forwareded to the
 # http web server.
 app.add_route("/{path:path}", _reverse_proxy, ["GET", "POST"])
-
-
-if __name__ == "__main__":
-    import webbrowser
-    import subprocess
-
-    import uvicorn  # type: ignore
-
-    webbrowser.open("http://localhost:80")
-
-    # python -m webbrowser -t "http://localhost"
-
-    cmd = f"http-server {DATA_ROOT}/www -p 8000 --cors=* -c-1"
-    print(f"Starting http-server: {cmd}")
-    with subprocess.Popen(cmd, shell=True):
-        # Run the server in debug mode.
-        uvicorn.run(app, host="0.0.0.0", port=80)

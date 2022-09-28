@@ -99,6 +99,36 @@ def get_image_size(fname) -> Tuple[int, int]:
         width, height = img.size
     return width, height
 
+async def make_thumbnail(final_path, out_thumbnail):
+    """Makes a thumbnail from the first frame of the video."""
+    # Make thumbnail
+    cmd = [
+        "static_ffmpeg",
+        "-i",
+        final_path,
+        "-vf",
+        "select=eq(n\\,0)",
+        "-q:v",
+        "3",
+        out_thumbnail,
+    ]
+    # os.system('ffmpeg -i inputfile.mkv -vf "select=eq(n\,0)" -q:v 3 output_image.jpg')
+    log.info("Creating thumbnail with cmd:\n  %s", cmd)
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await proc.communicate()
+    if proc.returncode != 0:
+        log.error("Failed to create thumbnail")
+        log.error("stdout: %s", stdout)
+        log.error("stderr: %s", stderr)
+        return PlainTextResponse(
+            status_code=500,
+            content="Failed to create thumbnail",
+        )
+    log.info("Created thumbnail")
 
 async def db_add_video(  # pylint: disable=too-many-branches
     title: str,
@@ -176,7 +206,6 @@ async def db_add_video(  # pylint: disable=too-many-branches
                 content=f"Invalid thumbnail type, must be .jpg, instead it was {thumbnail_ext}",
             )
         await async_download(thumbnail, out_thumbnail)
-
         thumbnail_width, thumbnail_height = get_image_size(out_thumbnail)
         if thumbnail_width > 1280 or thumbnail_height > 720:
             return PlainTextResponse(
@@ -187,34 +216,7 @@ async def db_add_video(  # pylint: disable=too-many-branches
                 ),
             )
     else:
-        # Make thumbnail
-        cmd = [
-            "static_ffmpeg",
-            "-i",
-            final_path,
-            "-vf",
-            "select=eq(n\\,0)",
-            "-q:v",
-            "3",
-            out_thumbnail,
-        ]
-        # os.system('ffmpeg -i inputfile.mkv -vf "select=eq(n\,0)" -q:v 3 output_image.jpg')
-        log.info("Creating thumbnail with cmd:\n  %s", cmd)
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await proc.communicate()
-        if proc.returncode != 0:
-            log.error("Failed to create thumbnail")
-            log.error("stdout: %s", stdout)
-            log.error("stderr: %s", stderr)
-            return PlainTextResponse(
-                status_code=500,
-                content="Failed to create thumbnail",
-            )
-        log.info("Created thumbnail")
+        await make_thumbnail(final_path, out_thumbnail)
     # TODO: Final check, use ffprobe to check if it is a valid mp4 file that can be  # pylint: disable=fixme
     # streamed.
     await async_create_webtorrent_files(
