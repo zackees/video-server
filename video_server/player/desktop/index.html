@@ -1,18 +1,10 @@
 <!DOCTYPE html>
 <html>
 
-<!-- Current investigated player
-https://github.com/sampotts/plyr
--->
-
 <head>
     <meta charset="UTF-8">
     <title>Desktop Player</title>
     <link rel="preload" href="movie.js" as="script">
-    <!--
-  <link rel="stylesheet" type="text/css" href="movie.css">
-  -->
-
     <link rel="stylesheet" href="movie.css">
     <style>
         body {
@@ -23,20 +15,11 @@ https://github.com/sampotts/plyr
 </head>
 
 <body>
-    <!-- Note that poster here is a 1x1 black pixel. -->
-
-    <!--
-    https://cdn.plyr.io/3.7.2/plyr.polyfilled.js
-    https://cdn.plyr.io/3.7.2/plyr.css  
-  -->
     <script src="plyr.min.js"></script>
     <link rel="stylesheet" href="plyr.min.css" />
-
-
     <style>
         body {
             overflow: hidden;
-            /* Hide scrollbars */
         }
 
         /* Remove native button */
@@ -49,7 +32,6 @@ https://github.com/sampotts/plyr
         }
 
         .plyr__video-wrapper {
-            /*display: none;*/
             max-height: 100vh;
         }
 
@@ -72,13 +54,10 @@ https://github.com/sampotts/plyr
         }
 
         .plyr__captions {
-            /*pointer-events: none;*/
             margin-bottom: 3vh;
         }
 
-
         .plyr__caption {
-            /*pointer-events: none;*/
             font-size: 3vw;
             background-color: rgba(0, 0, 0, 0);
             line-height: 1.5;
@@ -106,17 +85,6 @@ https://github.com/sampotts/plyr
 
     <div class="container">
         <video id="player" preload="metadata">
-            <!--
-
-
-            <source src="https://zbbb278hfll091.bitchute.com/1OjmxN0iuwte/zzYJu1eNdfSN.mp4" type="video/mp4" size="720">
-            <source src="https://zbbb278hfll091.bitchute.com/1OjmxN0iuwte/zzYJu1eNdfSN.mp4" type="video/mp4"
-                size="1080">
-            -->
-            <!-- Caption files 
-            <track label="English" srclang="en" src="demo.vtt" kind="subtitles" default>
-            <track label="External VTT Test" srclang="fr" src="demo2.vtt" kind="subtitles">
-            -->
         </video>
     </div>
     <a id="play-btn" href="#"></a>
