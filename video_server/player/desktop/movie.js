@@ -22,22 +22,7 @@
             playBtn.classList.add('active')
         })
     }
-    function resizeSpinnerContainer() {
-        let maxWidth = 0
-        let maxHeight = 0
-        document.querySelectorAll('.spinner').forEach(function (el) {
-            const width = el.getBoundingClientRect().width
-            const height = el.getBoundingClientRect().height
-            maxWidth = Math.max(maxWidth, width)
-            maxHeight = Math.max(maxHeight, height)
-        })
-        const spinnerContainer = document.getElementById('spinner-container')
-        spinnerContainer.style.width = maxWidth + 'px'
-        spinnerContainer.style.height = maxHeight + 'px'
-    }
-    resizeSpinnerContainer()
-    // on dom content loaded
-    document.addEventListener('DOMContentLoaded', resizeSpinnerContainer)
+
     playBtn.onclick = function (evt) {
         play()
         playBtn.classList.remove('active')
