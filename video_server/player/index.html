@@ -42,12 +42,30 @@
             pointer-events: none;
         }
 
+        #play-btn {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            z-index: 100000;
+            color: white;
+        }
+
+        #play-btn.hide {
+            display: none;
+        }
+
     </style>
 </head>
 
 <body>
+    <img id="play-btn"
+        src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/PjwhRE9DVFlQRSBzdmcgIFBVQkxJQyAnLS8vVzNDLy9EVEQgU1ZHIDEuMS8vRU4nICAnaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkJz48c3ZnIGhlaWdodD0iMzJweCIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMzIgMzI7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMycHgiIHhtbDpzcGFjZT0icHJlc2VydmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPjxnIGlkPSJMYXllcl8xIi8+PGcgaWQ9InBsYXlfeDVGX2FsdCI+PHBhdGggZD0iTTE2LDBDNy4xNjQsMCwwLDcuMTY0LDAsMTZzNy4xNjQsMTYsMTYsMTZzMTYtNy4xNjQsMTYtMTZTMjQuODM2LDAsMTYsMHogTTEwLDI0VjhsMTYuMDA4LDhMMTAsMjR6ICAgIiBzdHlsZT0iZmlsbDojNEU0RTUwOyIvPjwvZz48L3N2Zz4=" />
     <iframe id="iframe-target" allowfullscreen></iframe>
     <img id="img-poster">
+
 </body>
 
 <!-- This is the self contained file for player + mp4 in same folder -->
@@ -58,12 +76,12 @@
     // If found, it will use that param to determine which player to use.
 
     const searchParams = new URLSearchParams(window.location.search)
-    console.log(window.location.search)
     const urljson = searchParams.get('d')
     const autoplay = searchParams.get('autoplay') === 'true'
 
     const $iframeTarget = document.getElementById('iframe-target')
     const $imgPoster = document.getElementById('img-poster')
+    const $playBtn = document.getElementById('play-btn')
 
     fetch(urljson)
         .then(response => response.json())
@@ -87,6 +105,7 @@
             $iframeTarget.src = src
             $imgPoster.classList.add("hide");
             $iframeTarget.classList.add("show");
+            $playBtn.classList.add("hide");
         })
     }
     if (autoplay) {
