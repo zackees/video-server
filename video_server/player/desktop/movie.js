@@ -28,40 +28,6 @@
         playBtn.classList.remove('active')
         evt.preventDefault()
     }
-    function getVideoCenterPoint() {
-        const el = document.querySelector('div.plyr__video-wrapper')
-        if (!el) {
-            return [0, 0]
-        }
-        const videoWidth = el.clientWidth
-        const videoHeight = el.clientHeight
-        const videoCenterX = Number.parseInt(el.clientLeft + videoWidth / 2)
-        const videoCenterY = Number.parseInt(el.clientTop + videoHeight / 2)
-        return [videoCenterX, videoCenterY]
-    }
-
-    function applySpinnerContainerCentering() {
-        const [x, y] = getVideoCenterPoint()
-        const left = Number.parseInt(x - spinContainer.clientWidth / 2) + 'px'
-        const top = Number.parseInt(y - spinContainer.clientHeight / 2) + 'px'
-        if (spinContainer.style.left !== left) {
-            spinContainer.style.left = left
-        }
-        if (spinContainer.style.top !== top) {
-            spinContainer.style.top = top
-        }
-    }
-
-
-    function onResize() {
-        applySpinnerContainerCentering()
-    }
-
-    // on window size change
-    onResize()
-    // TODO: Use a mutation observer and only call onResize() when the video size changes.
-    setInterval(onResize)
-    // window.onresize = onResize
 
     // Autoplay the video
     spinContainer.classList.add('active')
