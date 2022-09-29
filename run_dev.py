@@ -18,6 +18,7 @@ from video_server.app import app
 def main() -> None:
     webbrowser.open("http://localhost:80")
     cmd = f"http-server {DATA_ROOT}/www -p 8000 --cors=* -c-1"
+    #cmd = f"live-server {DATA_ROOT}/www --port=8000 --cors --no-browser"
     print(f"Starting http-server: {cmd}")
     with subprocess.Popen(cmd, shell=True):
         # Run the server in debug mode.
