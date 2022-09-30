@@ -211,7 +211,7 @@ def create_webtorrent_files(
     log.info(f"Subtitles: {subtitles}")
     video_json = {
         "note": "This is a sample and should be overriden during the video creation process",
-        "name": vidpath,
+        "title": vid_name,
         "urlslug": url_slug,
         "url": base_video_path,
         "domain": domain_name,
