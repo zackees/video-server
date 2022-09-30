@@ -45,6 +45,7 @@ class GenerateFilesTester(unittest.TestCase):
         # Create a temporary folder.
         try:
             generate_files.create_webtorrent_files(
+                vid_id=1,
                 vid_name="test",
                 vidfile=TEST_MP4,
                 domain_name=DOMAIN_NAME,

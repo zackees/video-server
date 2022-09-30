@@ -219,8 +219,16 @@ async def db_add_video(  # pylint: disable=too-many-branches
         await make_thumbnail(final_path, out_thumbnail)
     # TODO: Final check, use ffprobe to check if it is a valid mp4 file that can be  # pylint: disable=fixme
     # streamed.
+
+    relpath = os.path.relpath(final_path, WWW_ROOT)
+    url = path_to_url(os.path.dirname(relpath))
+    vid_id = Video.create(
+        title=title, url=url, description=description, path=final_path, iframe=url
+    ).id
+
     await async_create_webtorrent_files(
         vid_name=title,
+        vid_id=vid_id,
         vidfile=final_path,
         domain_name=DOMAIN_NAME,
         tracker_announce_list=TRACKER_ANNOUNCE_LIST,
@@ -229,9 +237,5 @@ async def db_add_video(  # pylint: disable=too-many-branches
         chunk_factor=WEBTORRENT_CHUNK_FACTOR,
         do_encode=do_encode,
     )
-    relpath = os.path.relpath(final_path, WWW_ROOT)
-    url = path_to_url(os.path.dirname(relpath))
-    Video.create(
-        title=title, url=url, description=description, path=final_path, iframe=url
-    )
+
     return PlainTextResponse(content=f"Video Created!: {url}")

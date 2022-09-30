@@ -125,6 +125,7 @@ def get_video_height(vidfile: str) -> int:
 
 
 def create_webtorrent_files(
+    vid_id: int,
     vid_name: str,
     vidfile: str,
     domain_name: str,
@@ -210,15 +211,14 @@ def create_webtorrent_files(
     ]
     log.info(f"Subtitles: {subtitles}")
     video_json = {
-        "note": "This is a sample and should be overriden during the video creation process",
         "title": vid_name,
+        "id": vid_id,
         "urlslug": url_slug,
         "url": base_video_path,
         "domain": domain_name,
         "videos": completed_vids,
         "subtitles": subtitles,
         "poster": f"{base_video_path}/thumbnail.jpg",
-        "todo": "Let's also have bitchute: <URL> and rumble <URL>",
         "webtorrent": {
             "enabled": WEBTORRENT_ENABLED,
             "eager_webseed": True,
@@ -235,6 +235,7 @@ def create_webtorrent_files(
 
 @asyncwrap
 def async_create_webtorrent_files(
+    vid_id: int,
     vid_name: str,
     vidfile: str,
     domain_name: str,
@@ -246,6 +247,7 @@ def async_create_webtorrent_files(
 ) -> str:
     """Creates the webtorrent files for a given video file."""
     return create_webtorrent_files(
+        vid_id=vid_id,
         vid_name=vid_name,
         vidfile=vidfile,
         domain_name=domain_name,
