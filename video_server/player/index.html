@@ -83,15 +83,48 @@
     const $imgPoster = document.getElementById('img-poster')
     const $playBtn = document.getElementById('play-btn')
 
+    let jsonFetched = false;
+    let loaded = false
+    let viewAdded = false;
+    let jsonData = null;
+
+    function incrementVideoCount() {
+        if (viewAdded) {
+            console.error("View already added")
+            return
+        }
+        if (!jsonData) {
+            console.error("No json data")
+            return
+        }
+        viewAdded = true;
+        const endpoint = '/add_view/' + jsonData.id
+        // do a put operation to add a view
+        fetch(endpoint, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then(res => {
+            // Success!
+        }).catch(err => {
+            console.error("Error adding view", err)
+        })
+    }
+
     fetch(urljson)
         .then(response => response.json())
         .then(data => {
+            jsonFetched = true;
             console.log(data)
-            const poster = data.poster
-            $imgPoster.src = poster
+            $imgPoster.src = data.poster
+            if (jsonFetched && loaded) {
+                incrementVideoCount()
+            }
+            jsonData = data
         })
 
-    let loaded = false
+
     function loadPlayer() {
         if (loaded) {
             return
@@ -106,6 +139,9 @@
             $imgPoster.classList.add("hide");
             $iframeTarget.classList.add("show");
             $playBtn.classList.add("hide");
+            if (jsonFetched && loaded) {
+                incrementVideoCount()
+            }
         })
     }
     if (autoplay) {
