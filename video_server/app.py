@@ -54,6 +54,7 @@ from video_server.settings import (  # STUN_SERVERS,; TRACKER_ANNOUNCE_LIST,
     DISABLE_AUTH,
     PASSWORD,
     DATA_ROOT,
+    DOMAIN_NAME
 )
 from video_server.version import VERSION
 
@@ -198,6 +199,7 @@ async def api_info(request: Request) -> JSONResponse:
         "VIDEO_ROOT": VIDEO_ROOT,
         "LOGFILE": LOGFILE,
         "Links": links,
+        "DOMAIN_NAME": DOMAIN_NAME
     }
     return JSONResponse(out)
 
