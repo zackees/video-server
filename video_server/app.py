@@ -12,6 +12,7 @@ import threading
 import time
 import traceback
 from typing import Optional
+import uvicorn, subprocess
 
 import httpx
 from fastapi import BackgroundTasks, FastAPI, File, Request, UploadFile
@@ -54,7 +55,8 @@ from video_server.settings import (  # STUN_SERVERS,; TRACKER_ANNOUNCE_LIST,
     DISABLE_AUTH,
     PASSWORD,
     DATA_ROOT,
-    DOMAIN_NAME
+    DOMAIN_NAME,
+    FILE_PORT
 )
 from video_server.version import VERSION
 
@@ -69,7 +71,7 @@ class RssResponse(Response):  # pylint: disable=too-few-public-methods
     charset = "utf-8"
 
 
-HTTP_SERVER = AsyncClient(base_url="http://localhost:8000/")
+HTTP_SERVER = AsyncClient(base_url=f"http://localhost:{FILE_PORT}/")
 
 log.info("Starting fastapi webtorrent movie server")
 
@@ -325,7 +327,7 @@ if IS_TEST:
 
 
 async def _reverse_proxy(request: Request):
-    url = httpx.URL(path=request.url.path, query=request.url.query.encode("utf-8"))
+    url = httpx.URL(path=request.url.path, port=FILE_PORT, query=request.url.query.encode("utf-8"))
     rp_req = HTTP_SERVER.build_request(
         request.method, url, headers=request.headers.raw, content=await request.body()
     )
@@ -341,3 +343,13 @@ async def _reverse_proxy(request: Request):
 # All the routes that aren't covered by app are forwareded to the
 # http web server.
 app.add_route("/{path:path}", _reverse_proxy, ["GET", "POST"])
+
+def main():
+    """Main entry point for the application script"""
+    cmd = f"http-server {DATA_ROOT}/www -p {FILE_PORT} --cors=* -c-1"
+    with subprocess.Popen(cmd, shell=True):
+        uvicorn.run(app, host="0.0.0.0", port=8888)
+
+
+if __name__ == "__main__":
+    main()

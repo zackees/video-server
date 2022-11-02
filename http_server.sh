@@ -5,4 +5,4 @@ if [ -z "$DATA_ROOT" ]; then
     echo "ERROR: DATA_ROOT is unset"
     exit 1
 fi
-http-server $DATA_ROOT/www -p 8000 --cors=*
+http-server $DATA_ROOT/www -p 7777 --cors=*
