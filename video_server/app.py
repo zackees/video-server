@@ -12,8 +12,8 @@ import threading
 import time
 import traceback
 from typing import Optional
-import uvicorn, subprocess
-
+import subprocess
+import uvicorn  # type: ignore
 
 import httpx
 from fastapi import BackgroundTasks, FastAPI, File, Request, UploadFile
@@ -208,6 +208,7 @@ async def api_info(request: Request) -> JSONResponse:
     }
     return JSONResponse(out)
 
+
 @app.get("/videos")
 async def list_videos() -> PlainTextResponse:
     """Reveals the videos that are available."""
@@ -324,7 +325,7 @@ if IS_TEST:
     @app.get("/log")
     async def log_file():
         """Returns the log file."""
-        logfile = open(LOGFILE, encoding="utf-8", mode="r")
+        logfile = open(LOGFILE, encoding="utf-8", mode="r")  # pylint: disable=consider-using-with
         return StreamingResponse(logfile, media_type="text/plain")
 
 
@@ -346,10 +347,11 @@ async def _reverse_proxy(request: Request):
 # http web server.
 app.add_route("/{path:path}", _reverse_proxy, ["GET", "POST"])
 
+
 def main():
-    import webbrowser
+    """Starts the server."""
+    import webbrowser  # pylint: disable=import-outside-toplevel
     webbrowser.open(f"http://localhost:{SERVER_PORT}")
-    """Main entry point for the application script"""
     cmd = f"http-server {DATA_ROOT}/www -p {FILE_PORT} --cors=* -c-1"
     with subprocess.Popen(cmd, shell=True):
         uvicorn.run(app, host="0.0.0.0", port=SERVER_PORT)

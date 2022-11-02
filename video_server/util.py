@@ -1,6 +1,10 @@
+"""
+Misc utility functions.
+"""
 import urllib.parse
 
 from video_server.settings import SERVER_PORT
+
 
 def get_video_url(url: str) -> str:
     """Return the video url."""
