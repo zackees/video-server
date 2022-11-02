@@ -19,6 +19,7 @@ COPY requirements.txt ./requirements.txt
 RUN pip install -r requirements.txt
 COPY . .
 RUN python -m pip install -e .
+ENV FILE_PORT=7777
 # Expose the port and then launch the app.
 EXPOSE 80
 EXPOSE 8000

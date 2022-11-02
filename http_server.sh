@@ -5,4 +5,10 @@ if [ -z "$DATA_ROOT" ]; then
     echo "ERROR: DATA_ROOT is unset"
     exit 1
 fi
-http-server $DATA_ROOT/www -p 7777 --cors=*
+# if FILE_PORT is unset
+if [ -z "$FILE_PORT" ]; then
+    echo "ERROR: FILE_PORT is unset"
+    exit 1
+fi
+echo http-server $DATA_ROOT/www -p $FILE_PORT --cors=*
+http-server $DATA_ROOT/www -p $FILE_PORT --cors=*
