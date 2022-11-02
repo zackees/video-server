@@ -51,3 +51,4 @@ WEBTORRENT_ENABLED = (
 )
 WEBTORRENT_CHUNK_FACTOR = int(os.environ.get("WEBTORRENT_CHUNK_FACTOR", "17"))
 FILE_PORT = int(os.environ.get("FILE_PORT", "7777"))
+SERVER_PORT = int(os.environ.get("SERVER_PORT", "8888"))

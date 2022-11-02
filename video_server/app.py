@@ -14,6 +14,7 @@ import traceback
 from typing import Optional
 import uvicorn, subprocess
 
+
 import httpx
 from fastapi import BackgroundTasks, FastAPI, File, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -56,8 +57,10 @@ from video_server.settings import (  # STUN_SERVERS,; TRACKER_ANNOUNCE_LIST,
     PASSWORD,
     DATA_ROOT,
     DOMAIN_NAME,
-    FILE_PORT
+    FILE_PORT,
+    SERVER_PORT
 )
+from video_server.util import get_video_url
 from video_server.version import VERSION
 
 # from fastapi.responses import StreamingResponse
@@ -94,6 +97,19 @@ app.add_middleware(
 )
 
 STARTUP_DATETIME = datetime.datetime.now()
+
+
+def get_video_url(url: str) -> str:
+    """Return the video url."""
+    if SERVER_PORT == 80:
+        return url
+    # parse url into parts
+    parts = urllib.parse.urlparse(url)
+    # replace the port
+    new_parts = parts._replace(netloc=f"{parts.hostname}:{SERVER_PORT}")
+    # rebuild the url
+    url = urllib.parse.urlunparse(new_parts)
+    return url
 
 
 def get_current_thread_id() -> int:
@@ -186,7 +202,7 @@ async def api_info(request: Request) -> JSONResponse:
     if not is_authorized(request):
         return JSONResponse({"error": "Not Authorized"}, status_code=401)
     app_data = app_state.to_dict()
-    links = [video.url for video in Video.select()]
+    links = [get_video_url(video.url) for video in Video.select()]
     out = {
         "version": VERSION,
         "Launched at": str(STARTUP_DATETIME),
@@ -205,11 +221,10 @@ async def api_info(request: Request) -> JSONResponse:
     }
     return JSONResponse(out)
 
-
 @app.get("/videos")
 async def list_videos() -> PlainTextResponse:
     """Reveals the videos that are available."""
-    links = [video.url for video in Video.select()]
+    links = [get_video_url(video.url) for video in Video.select()]
     return PlainTextResponse(content="\n".join(links))
 
 
@@ -345,10 +360,12 @@ async def _reverse_proxy(request: Request):
 app.add_route("/{path:path}", _reverse_proxy, ["GET", "POST"])
 
 def main():
+    import webbrowser
+    webbrowser.open(f"http://localhost:{SERVER_PORT}")
     """Main entry point for the application script"""
     cmd = f"http-server {DATA_ROOT}/www -p {FILE_PORT} --cors=* -c-1"
     with subprocess.Popen(cmd, shell=True):
-        uvicorn.run(app, host="0.0.0.0", port=8888)
+        uvicorn.run(app, host="0.0.0.0", port=SERVER_PORT)
 
 
 if __name__ == "__main__":

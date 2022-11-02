@@ -29,7 +29,7 @@ from video_server.settings import (
     MAX_BAD_LOGINS_RESET_TIME,
     WEBTORRENT_CHUNK_FACTOR,
 )
-
+from video_server.util import get_video_url
 from video_server.models import Video, db_proxy, BadLogin
 from video_server.log import log
 
@@ -238,4 +238,4 @@ async def db_add_video(  # pylint: disable=too-many-branches
         do_encode=do_encode,
     )
 
-    return PlainTextResponse(content=f"Video Created!: {url}")
+    return PlainTextResponse(content=f"Video Created!: {get_video_url(url)}")
