@@ -13,6 +13,7 @@ import time
 import traceback
 from typing import Optional
 import subprocess
+import json
 import uvicorn  # type: ignore
 
 import httpx
@@ -32,6 +33,7 @@ from httpx import AsyncClient
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 from starlette.background import BackgroundTask
 
+from video_server.util import async_download
 from video_server.asyncwrap import asyncwrap
 from video_server.db import (
     db_add_video,
@@ -58,7 +60,7 @@ from video_server.settings import (  # STUN_SERVERS,; TRACKER_ANNOUNCE_LIST,
     DATA_ROOT,
     DOMAIN_NAME,
     FILE_PORT,
-    SERVER_PORT
+    SERVER_PORT,
 )
 from video_server.util import get_video_url
 from video_server.version import VERSION
@@ -204,7 +206,7 @@ async def api_info(request: Request) -> JSONResponse:
         "VIDEO_ROOT": VIDEO_ROOT,
         "LOGFILE": LOGFILE,
         "Links": links,
-        "DOMAIN_NAME": DOMAIN_NAME
+        "DOMAIN_NAME": DOMAIN_NAME,
     }
     return JSONResponse(out)
 
@@ -278,6 +280,78 @@ async def upload(  # pylint: disable=too-many-branches,too-many-arguments
     )
 
 
+@app.post("/upload_url")
+def upload_url(request: Request, url: str) -> PlainTextResponse:
+    """Uploads a file to the server."""
+    import tempfile
+
+    if not is_authorized(request):
+        return PlainTextResponse("error: Not Authorized", status_code=401)
+    # Create temporary directory
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        cmd = f"yt-dlp {url} -J"
+        log.info("Running command:\n  ", cmd)
+        stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+        info = json.loads(stdout)
+        formats = info.get("formats")
+        title = info.get("title")
+        thumbnail = info.get("thumbnail")
+        has_drm = info.get("__has_drm")
+        if not formats:
+            return PlainTextResponse(
+                "Can't download video - No formats found", status_code=406
+            )
+        if not title:
+            return PlainTextResponse(
+                "Can't download video - No title found", status_code=406
+            )
+        if not thumbnail:
+            return PlainTextResponse(
+                "Can't download video - No thumbnail found", status_code=406
+            )
+        if has_drm:
+            return PlainTextResponse(
+                "Can't download video - DRM protected", status_code=406
+            )
+        # Gather the video's
+        vidinfos = []
+        for format in formats:
+            if "mp4" in format.get("ext", ""):
+                key = int(format.get("height", 0))
+                id = format.get("format_id")
+                vidinfos.append((key, id))
+        # sort so that the largest is first
+        vidinfos.sort(key=lambda x: x[0])
+        sizemap = {
+            1080: None,
+            720: None,
+            480: None,
+        }
+        for key in sizemap:
+            for i, resolution in enumerate(vidinfos):
+                if resolution[0] >= key:
+                    sizemap[key] = vidinfos[i][1]
+                    break
+        if not [x for x in sizemap.values() if x]:
+            return PlainTextResponse(
+                "Can't download video - No suitable formats found", status_code=501
+            )
+        downloaded_files: list[str] = []
+        for resolution, id in sizemap.items():
+            if id:
+                filename = os.path.join(tmpdirname, f"{resolution}.mp4")
+                cmd = f'yt-dlp {url} -f "{id}" -o "{filename}"'
+                log.info("Running command:\n  ", cmd)
+                stdout = subprocess.check_output(
+                    cmd, shell=True, universal_newlines=True
+                )
+                log.info(stdout)
+                downloaded_files.append(filename)
+                log.info(f"Downloaded {filename}")
+        log.info("Done downloading", url)
+    return PlainTextResponse("error: Not Implemented", status_code=501)
+
+
 @app.delete("/delete")
 async def delete(
     password: str, title: str, background_tasks: BackgroundTasks
@@ -325,12 +399,16 @@ if IS_TEST:
     @app.get("/log")
     async def log_file():
         """Returns the log file."""
-        logfile = open(LOGFILE, encoding="utf-8", mode="r")  # pylint: disable=consider-using-with
+        logfile = open(
+            LOGFILE, encoding="utf-8", mode="r"
+        )  # pylint: disable=consider-using-with
         return StreamingResponse(logfile, media_type="text/plain")
 
 
 async def _reverse_proxy(request: Request):
-    url = httpx.URL(path=request.url.path, port=FILE_PORT, query=request.url.query.encode("utf-8"))
+    url = httpx.URL(
+        path=request.url.path, port=FILE_PORT, query=request.url.query.encode("utf-8")
+    )
     rp_req = HTTP_SERVER.build_request(
         request.method, url, headers=request.headers.raw, content=await request.body()
     )
@@ -351,6 +429,7 @@ app.add_route("/{path:path}", _reverse_proxy, ["GET", "POST"])
 def main():
     """Starts the server."""
     import webbrowser  # pylint: disable=import-outside-toplevel
+
     webbrowser.open(f"http://localhost:{SERVER_PORT}")
     cmd = f"http-server {DATA_ROOT}/www -p {FILE_PORT} --cors=* -c-1"
     with subprocess.Popen(cmd, shell=True):

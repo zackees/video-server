@@ -18,6 +18,7 @@ from peewee import ModelSelect  # type: ignore
 from video_server.asyncwrap import asyncwrap
 from video_server.generate_files import async_create_webtorrent_files
 from video_server.io import sanitize_path
+from video_server.util import async_download
 from video_server.settings import (
     DATA_ROOT,
     DOMAIN_NAME,
@@ -44,9 +45,7 @@ def can_login() -> bool:
         oldest = BadLogin.select().where(BadLogin.created < oldest_allowed)
         for bad_login in oldest:  # pylint: disable=not-an-iterable
             bad_login.delete_instance()
-        num_bad_logins = (
-            BadLogin.select().count()
-        )
+        num_bad_logins = BadLogin.select().count()
         return num_bad_logins < MAX_BAD_LOGINS
 
 
@@ -79,15 +78,6 @@ def db_list_all_files() -> List[str]:
     return files
 
 
-async def async_download(src: UploadFile, dst: str) -> None:
-    """Downloads a file to the destination."""
-    with open(dst, mode="wb") as filed:
-        while (chunk := await src.read(1024 * 64)) != b"":
-            filed.write(chunk)
-    await src.close()
-    return None
-
-
 def to_video_dir(title: str) -> str:
     """Returns the video directory for a title."""
     return os.path.join(VIDEO_ROOT, sanitize_path(title))
@@ -98,6 +88,7 @@ def get_image_size(fname) -> Tuple[int, int]:
     with Image.open(fname) as img:
         width, height = img.size
     return width, height
+
 
 async def make_thumbnail(final_path, out_thumbnail):
     """Makes a thumbnail from the first frame of the video."""
@@ -129,6 +120,7 @@ async def make_thumbnail(final_path, out_thumbnail):
             content="Failed to create thumbnail",
         )
     log.info("Created thumbnail")
+
 
 async def db_add_video(  # pylint: disable=too-many-branches
     title: str,
