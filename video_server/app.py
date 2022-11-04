@@ -47,7 +47,7 @@ from video_server.db import (
 from video_server.generate_files import (
     init_static_files,
     create_metadata_files,
-    async_create_metadata_files
+    async_create_metadata_files,
 )
 from video_server.log import log
 from video_server.models import Video
@@ -81,7 +81,7 @@ from video_server.util import (
     async_encode,
     async_get_video_height,
     Cleanup,
-    download_file
+    download_file,
 )
 from video_server.version import VERSION
 
@@ -415,7 +415,9 @@ async def upload(  # pylint: disable=too-many-branches,too-many-arguments,too-ma
 
 
 @app.post("/upload_url")
-def upload_url(request: Request, url: str) -> PlainTextResponse:  # pylint: disable=too-many-statements
+def upload_url(  # pylint: disable=too-many-statements
+    request: Request, url: str
+) -> PlainTextResponse:
     """Uploads a file to the server."""
     if not is_authorized(request):
         return PlainTextResponse("error: Not Authorized", status_code=401)
@@ -485,22 +487,25 @@ def upload_url(request: Request, url: str) -> PlainTextResponse:  # pylint: disa
             filename = os.path.join(video_dir, f"{resolution}.mp4")
             cmd = f'yt-dlp --no-check-certificate {url} -f "{id}" -o "{filename}"'
             log.info(f"Running command:\n  {cmd}")
-            stdout = subprocess.check_output(
-                cmd, shell=True, universal_newlines=True
-            )
+            stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
             log.info(stdout)
             downloaded_files.append(filename)
             log.info(f"Downloaded {filename}")
     log.info(f"Done downloading: {url}")
-    subtitle_dir = os.path.join(video_dir, "subtitles")  # noqa: F841  # pylint: disable=unused-variable
+    subtitle_dir = os.path.join(  # noqa: F841  # pylint: disable=unused-variable
+        video_dir, "subtitles"
+    )
     final_path = os.path.join(video_dir, "vid.mp4")
     relpath = os.path.relpath(final_path, WWW_ROOT)
     url = path_to_url(os.path.dirname(relpath))
     thumbnail_path = os.path.join(video_dir, "thumbnail.jpg")
     download_file(thumbnail, thumbnail_path)
-    
     vid_id = Video.create(
-        title=title, url=url, description="TODO - Add description", path=final_path, iframe=url
+        title=title,
+        url=url,
+        description="TODO - Add description",
+        path=final_path,
+        iframe=url,
     ).id
     create_metadata_files(
         vid_id=vid_id,

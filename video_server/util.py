@@ -8,6 +8,7 @@ import subprocess
 import urllib.parse
 from typing import Tuple
 
+import requests  # type: ignore
 from PIL import Image  # type: ignore
 
 from fastapi import UploadFile
@@ -37,18 +38,17 @@ async def async_download(src: UploadFile, dst: str) -> None:
         while (chunk := await src.read(CHUNK_SIZE)) != b"":
             filed.write(chunk)
     await src.close()
-    return None
 
-import requests
 
 def download_file(url: str, outfile: str) -> None:
-    r = requests.get(url)
-    f = open(outfile, 'wb')
-    for chunk in r.iter_content(chunk_size=512 * 1024): 
-        if chunk: # filter out keep-alive new chunks
-            f.write(chunk)
-    f.close()
-    return 
+    """Download a file."""
+    req = requests.get(url, timeout=10)
+    log.info("Downloading %s to %s", url, outfile)
+    with open(outfile, "wb") as filed:
+        for chunk in req.iter_content(chunk_size=512 * 1024):
+            if chunk:  # filter out keep-alive new chunks
+                filed.write(chunk)
+        filed.close()
 
 
 async def make_thumbnail(vidpath: str, out_thumbnail: str) -> None:
@@ -167,12 +167,7 @@ def query_duration(vidfile: str) -> float:
 
 
 def mktorrent_task(  # pylint: disable=too-many-arguments
-    vidfile,
-    torrent_path,
-    tracker_announce_list,
-    chunk_factor,
-    webseed,
-    torrent_url
+    vidfile, torrent_path, tracker_announce_list, chunk_factor, webseed, torrent_url
 ):
     """Creates a torrent file."""
     mktorrent(
@@ -195,6 +190,7 @@ def mktorrent_task(  # pylint: disable=too-many-arguments
 
 class Cleanup:
     """Cancellable cleanup function"""
+
     def __init__(self, cleanup_fcn) -> None:
         self.cleanup = True
         self.cleanup_fcn = cleanup_fcn
