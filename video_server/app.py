@@ -7,7 +7,6 @@ import asyncio
 import datetime
 import hashlib
 import os
-import tempfile
 import shutil
 import threading
 import time
@@ -45,7 +44,11 @@ from video_server.db import (
     can_login,
     add_bad_login,
 )
-from video_server.generate_files import init_static_files, create_metadata_files, async_create_metadata_files
+from video_server.generate_files import (
+    init_static_files,
+    create_metadata_files,
+    async_create_metadata_files
+)
 from video_server.log import log
 from video_server.models import Video
 from video_server.rss import rss
