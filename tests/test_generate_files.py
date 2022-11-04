@@ -44,14 +44,15 @@ class GenerateFilesTester(unittest.TestCase):
         assert os.path.exists(TEST_MP4)
         # Create a temporary folder.
         try:
-            generate_files.create_webtorrent_files(
+            generate_files.create_metadata_files(
                 vid_id=1,
-                vid_name="test",
-                vidfile=TEST_MP4,
+                vid_title="test",
+                vidfiles=[TEST_MP4],
                 domain_name=DOMAIN_NAME,
                 tracker_announce_list=TRACKER_ANNOUNCE_LIST,
                 stun_servers=STUN_SERVERS,
                 out_dir=TMP_DIR,
+                chunk_factor=17
             )
             print("Finished")
         except Exception as e:

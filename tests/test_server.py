@@ -2,16 +2,20 @@ import contextlib
 import threading
 import time
 import unittest
-
+import os
 import requests
 import uvicorn
+
 from uvicorn.config import Config
+
+os.environ["SERVER_PORT"] = "8888"
+os.environ["FILE_PORT"] = "7777"
 
 # from video_server.app import app
 
 APP_NAME = "video_server.app:app"
 MY_IP = "127.0.0.1"
-PORT = 4422  # Arbitrarily chosen.
+PORT = int(os.environ["SERVER_PORT"])  # Arbitrarily chosen.
 
 
 # Surprisingly uvicorn does allow graceful shutdowns, making testing hard.
@@ -52,7 +56,7 @@ class ServerTester(unittest.TestCase):
         """Opens up the server and tests that the version returned is correct."""
         with server.run_in_thread():
             time.sleep(1)
-            version = requests.get(f"http://{MY_IP}:{PORT}/stats").text
+            version = requests.get(f"http://{MY_IP}:{PORT}/info").text
             self.assertIsNotNone(version)
 
 

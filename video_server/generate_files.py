@@ -18,10 +18,8 @@ import hashlib
 import json
 import os
 import shutil
-import subprocess
 import warnings
 from distutils.dir_util import copy_tree  # pylint: disable=deprecated-module
-from typing import List, Optional
 from concurrent.futures import ThreadPoolExecutor
 
 from video_server.asyncwrap import asyncwrap
@@ -29,12 +27,10 @@ from video_server.asyncwrap import asyncwrap
 from video_server.io import read_utf8, sanitize_path, write_utf8
 from video_server.lang import lang_label
 from video_server.settings import (
-    ENCODING_HEIGHTS,
-    ENCODING_CRF,
     NUMBER_OF_ENCODING_THREADS,
-    ENCODER_PRESET,
     WEBTORRENT_ENABLED,
 )
+from video_server.util import get_video_height, mktorrent_task
 from video_server.log import log
 
 # WORK IN PROGRESS
@@ -57,27 +53,6 @@ def filemd5(filename):
     return d.hexdigest()
 
 
-def mktorrent(
-    vidfile: str, torrent_path: str, tracker_announce_list: List[str], chunk_factor: int
-) -> None:
-    """Creates a torrent file."""
-    # if windows
-    if os.name == "nt":
-        log.error("mktorrent not supported on windows")
-        return
-    if os.path.exists(torrent_path):
-        os.remove(torrent_path)
-    # Use which to detect whether the mktorrent binary is available.
-    if not shutil.which("mktorrent"):
-        raise OSError("mktorrent not found")
-    tracker_announce = "-a " + " -a ".join(tracker_announce_list)
-    cmd = f'mktorrent "{vidfile}" {tracker_announce} -l {chunk_factor} -o "{torrent_path}"'
-    log.info(f"Running\n    {cmd}")
-    # subprocess.check_output(cmd, shell=True)
-    os.system(cmd)
-    assert os.path.exists(torrent_path), f"Missing expected {torrent_path}"
-
-
 def mklink(src: str, link_path: str) -> None:
     """Creates a symbolic link."""
     # If this fails here on win32 then turn on "developer mode".
@@ -86,112 +61,44 @@ def mklink(src: str, link_path: str) -> None:
     os.symlink(src, link_path, target_is_directory=os.path.isdir(src))
 
 
-def query_duration(vidfile: str) -> float:
-    """Queries the duration of a video."""
-    cmd = f'static_ffprobe "{vidfile}" -show_format 2>&1'
-    stdout = subprocess.check_output(cmd, shell=True)
-    lines = stdout.decode().splitlines()
-    duration: Optional[float] = None
-    for line in lines:
-        if line.startswith("duration"):
-            duration = float(line.split("=")[1])
-            break
-    assert duration is not None, f"Missing duration in {vidfile}"
-    return duration
-
-
-def encode(videopath: str, crf: int, height: int, outpath: str) -> None:
-    """Encodes a video"""
-    downmix_stmt = "-ac 1" if height <= 480 else ""
-    # trunc(oh*...) fixes issue with libx264 encoder not liking an add number of width pixels.
-    cmd = f'static_ffmpeg -hide_banner -i "{videopath}" -vf scale="trunc(oh*a/2)*2:{height}" {downmix_stmt} -movflags +faststart -preset {ENCODER_PRESET} -c:v libx264 -crf {crf} "{outpath}" -y'  # pylint: disable=line-too-long
-    log.info(f"Running:\n  {cmd}")
-    proc = subprocess.Popen(cmd, shell=True)
-    proc.wait()
-    log.info("Generated file: " + outpath)
-
-
-def get_video_height(vidfile: str) -> int:
-    """Gets the video height from the video file."""
-    # use ffprobe to get the height of the video
-    cmd = f'static_ffprobe "{vidfile}" -show_streams 2>&1'
-    stdout = subprocess.check_output(cmd, shell=True)
-    lines = stdout.decode().splitlines()
-    for line in lines:
-        if line.startswith("height"):
-            height = int(line.split("=")[1])
-            return height
-    raise ValueError(f"Missing height in {vidfile}")
-
-
-def create_webtorrent_files(
+def create_metadata_files(
     vid_id: int,
-    vid_name: str,
-    vidfile: str,
+    vid_title: str,
+    vidfiles: list[str],
     domain_name: str,
-    tracker_announce_list: List[str],
+    tracker_announce_list: list[str],
     stun_servers: str,  # pylint: disable=unused-argument
     out_dir: str,
-    chunk_factor: int = 17,
-    do_encode: bool = False,
+    chunk_factor: int,
 ) -> str:
     """Generates the webtorrent files for a given video file."""
     assert tracker_announce_list
     os.makedirs(out_dir, exist_ok=True)
-    original_video_height = get_video_height(vidfile)
+    # original_video_height = get_video_height(vidfile)
     html_path = os.path.join(out_dir, "index.html")
     http_type = "http" if "localhost" in domain_name else "https"
-    vidpath = sanitize_path(vid_name)
-
-    base_video_path = f"{http_type}://{domain_name}/v/{vidpath}"
-
-    def encoding_task(vidfile, crf, height, outpath, torrent_path):
-        if do_encode:
-            encode(videopath=vidfile, crf=crf, height=height, outpath=outpath)
-        else:
-            shutil.copy(vidfile, outpath)
-        mktorrent(
-            vidfile=outpath,
-            torrent_path=torrent_path,
-            tracker_announce_list=tracker_announce_list,
-            chunk_factor=chunk_factor,
-        )
-        size_mp4file = os.path.getsize(outpath)
-        duration: float = query_duration(outpath)
-        webseed = f"{base_video_path}/{height}.mp4"
-        torrent_url = f"{base_video_path}/{height}.torrent"
-        return dict(
-            height=height,
-            duration=duration,
-            size=size_mp4file,
-            file_url=webseed,
-            torrent_url=torrent_url,
-        )
-
+    vidname = sanitize_path(vid_title)
+    base_video_path = f"{http_type}://{domain_name}/v/{vidname}"
     tasks = []
-    for height in ENCODING_HEIGHTS:
-        if do_encode:
-            if height > original_video_height:
-                continue  # Don't encode if the height is greater than the original.
-        height = original_video_height if not do_encode else height
+    # for height in ENCODING_HEIGHTS:
+    for vidfile in vidfiles:
+        height = get_video_height(vidfile)
         basename = os.path.join(out_dir, f"{height}")
         task = executor.submit(
-            encoding_task,
-            vidfile,
-            ENCODING_CRF,
-            height,
-            basename + ".mp4",
-            basename + ".torrent",
+            mktorrent_task,
+            vidfile=vidfile,
+            torrent_path=f"{basename}.torrent",
+            tracker_announce_list=tracker_announce_list,
+            chunk_factor=chunk_factor,
+            webseed=f"{base_video_path}/{height}.mp4",
+            torrent_url=f"{base_video_path}/{height}.torrent",
         )
         tasks.append(task)
-        if not do_encode:
-            break  # It's just a copy, so we only need to do one encoding.
-
     completed_vids: list[dict] = [task.result() for task in tasks]
-    vidfolder = os.path.dirname(vidfile)
+    vidfolder = os.path.dirname(vid_title)
     subtitles_dir = os.path.join(vidfolder, "subtitles")
     log.info(f"Subtitles dir: {subtitles_dir}")
-    url_slug = f"/v/{vidpath}"
+    url_slug = f"/v/{vidname}"
     vtt_files = []
     if os.path.exists(subtitles_dir):
         vtt_files = [f for f in os.listdir(subtitles_dir) if f.endswith(".vtt")]
@@ -211,7 +118,7 @@ def create_webtorrent_files(
     ]
     log.info(f"Subtitles: {subtitles}")
     video_json = {
-        "title": vid_name,
+        "title": vid_title,
         "id": vid_id,
         "urlslug": url_slug,
         "url": base_video_path,
@@ -224,7 +131,6 @@ def create_webtorrent_files(
             "eager_webseed": True,
         },
     }
-
     json_data = json.dumps(video_json, indent=4)
     write_utf8(os.path.join(out_dir, "video.json"), contents=json_data)
     src_html = os.path.join(PLAYER_DIR, "index.template.html")
@@ -234,28 +140,26 @@ def create_webtorrent_files(
 
 
 @asyncwrap
-def async_create_webtorrent_files(
+def async_create_metadata_files(
     vid_id: int,
-    vid_name: str,
-    vidfile: str,
+    vid_title: str,
+    vidfiles: list[str],
     domain_name: str,
-    tracker_announce_list: List[str],
-    stun_servers: str,
+    tracker_announce_list: list[str],
+    stun_servers: str,  # pylint: disable=unused-argument
     out_dir: str,
-    chunk_factor: int = 17,
-    do_encode: bool = False,
+    chunk_factor: int,
 ) -> str:
     """Creates the webtorrent files for a given video file."""
-    return create_webtorrent_files(
+    return create_metadata_files(
         vid_id=vid_id,
-        vid_name=vid_name,
-        vidfile=vidfile,
+        vid_title=vid_title,
+        vidfiles=vidfiles,
         domain_name=domain_name,
         tracker_announce_list=tracker_announce_list,
         stun_servers=stun_servers,
         out_dir=out_dir,
         chunk_factor=chunk_factor,
-        do_encode=do_encode,
     )
 
 

@@ -13,7 +13,7 @@ from peewee import (
     DateTimeField,
     IntegerField,  # type: ignore
     Model,
-    PrimaryKeyField,
+    AutoField,
     FloatField,
 )
 from playhouse.shortcuts import model_to_dict  # type: ignore
@@ -78,7 +78,7 @@ class BaseModel(Model):
 class Video(BaseModel):
     """Model used for the video"""
 
-    id = PrimaryKeyField()
+    id = AutoField()
     title = CharField(null=False, unique=True, index=True)
     description = CharField(null=False, default="")
     url = CharField(null=False, unique=True, index=True)

@@ -2,20 +2,22 @@
     Fastapi server
 """
 
-# pylint: disable=fixme,broad-except,logging-fstring-interpolation
+# pylint: disable=fixme,broad-except,logging-fstring-interpolation,too-many-locals,redefined-builtin,invalid-name,too-many-branches,too-many-return-statements
 import asyncio
 import datetime
 import hashlib
 import os
+import tempfile
 import shutil
 import threading
 import time
 import traceback
-from typing import Optional
 import subprocess
 import json
-import uvicorn  # type: ignore
+from tempfile import TemporaryDirectory
+from typing import Optional, Tuple
 
+import uvicorn  # type: ignore
 import httpx
 from fastapi import BackgroundTasks, FastAPI, File, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,6 +28,8 @@ from fastapi.responses import (
     Response,
     StreamingResponse,
 )
+
+
 from fastapi.security import HTTPBasic
 from fastapi.staticfiles import StaticFiles
 from filelock import FileLock, Timeout
@@ -33,36 +37,48 @@ from httpx import AsyncClient
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 from starlette.background import BackgroundTask
 
-from video_server.util import async_download
 from video_server.asyncwrap import asyncwrap
 from video_server.db import (
-    db_add_video,
     db_list_all_files,
     path_to_url,
     to_video_dir,
     can_login,
     add_bad_login,
 )
-from video_server.generate_files import init_static_files
+from video_server.generate_files import init_static_files, async_create_metadata_files
 from video_server.log import log
 from video_server.models import Video
 from video_server.rss import rss
 from video_server.settings import (  # STUN_SERVERS,; TRACKER_ANNOUNCE_LIST,
     APP_DB,
-    IS_TEST,
-    LOGFILE,
-    PROJECT_ROOT,
-    STARTUP_LOCK,
-    VIDEO_ROOT,
-    WWW_ROOT,
-    DISABLE_AUTH,
-    PASSWORD,
     DATA_ROOT,
+    DISABLE_AUTH,
     DOMAIN_NAME,
     FILE_PORT,
+    IS_TEST,
+    LOGFILE,
+    PASSWORD,
+    PROJECT_ROOT,
     SERVER_PORT,
+    STARTUP_LOCK,
+    STUN_SERVERS,
+    TRACKER_ANNOUNCE_LIST,
+    VIDEO_ROOT,
+    WEBTORRENT_CHUNK_FACTOR,
+    WWW_ROOT,
+    HEIGHTS,
+    ENCODING_CRF,
 )
-from video_server.util import get_video_url
+
+from video_server.util import (
+    get_video_url,
+    async_download,
+    make_thumbnail,
+    async_get_image_size,
+    async_encode,
+    async_get_video_height,
+    Cleanup,
+)
 from video_server.version import VERSION
 
 # from fastapi.responses import StreamingResponse
@@ -255,7 +271,7 @@ def list_all_files(request: Request) -> JSONResponse:
 
 
 @app.post("/upload")
-async def upload(  # pylint: disable=too-many-branches,too-many-arguments
+async def upload(  # pylint: disable=too-many-branches,too-many-arguments,too-many-statements
     request: Request,
     title: str,
     description: str = "",
@@ -270,27 +286,140 @@ async def upload(  # pylint: disable=too-many-branches,too-many-arguments
     # TODO: Use stream files, large files exhaust the ram.
     # This can be fixed by applying the following fix:
     # https://github.com/tiangolo/fastapi/issues/58
-    return await db_add_video(
-        title=title,
-        description=description,
-        file=file,
-        thumbnail=thumbnail,
-        subtitles_zip=subtitles_zip,
-        do_encode=do_encode,
+    # check to see if the video titles exists
+    if Video.select().where(Video.title == title).exists():
+        return PlainTextResponse(
+            content=f'Video with title "{title}" already exists', status_code=409
+        )
+    # Check that the upload file is valid
+    file_ext = os.path.splitext(file.filename)  # type: ignore
+    if len(file_ext) != 2:
+        return PlainTextResponse(
+            content=f"Invalid file extension for {file}", status_code=415
+        )
+    ext = file_ext[1].lower()
+    # Check if the file is a valid type
+    if do_encode:
+        if ext not in [".mp4", ".mkv", ".webm"]:
+            return PlainTextResponse(
+                status_code=415,
+                content=f"Invalid file type, must be mp4, mkv or webm, instead it was {ext}",
+            )
+    else:
+        if ext != ".mp4":
+            return PlainTextResponse(
+                status_code=415,
+                content=f"Invalid file type, must be mp4, instead it was {ext}",
+            )
+    log.info(f"Uploading file: {file.filename}")  # type: ignore
+    video_dir = to_video_dir(title)
+    try:
+        os.makedirs(video_dir)
+        # pylint: disable-next=unused-variable
+        cleanup = Cleanup(cleanup_fcn=lambda: shutil.rmtree(video_dir))
+    except FileExistsError:
+        return PlainTextResponse(
+            content=f'Video with title "{title}" already exists', status_code=409
+        )
+    subtitle_dir = os.path.join(video_dir, "subtitles")
+    # final_path = os.path.join(video_dir, "vid.mp4")
+    with TemporaryDirectory() as temp_dir:
+        temp_path: str = os.path.join(temp_dir, "vid.mp4")
+        await async_download(file, temp_path)
+        height = await async_get_video_height(temp_path)
+        final_path: str = os.path.join(video_dir, f"{height}.mp4")
+        shutil.move(temp_path, final_path)
+
+    if subtitles_zip is not None:
+        log.info(f"Uploading subtitles: {subtitles_zip.filename}")
+        await async_download(subtitles_zip, os.path.join(video_dir, "subtitles.zip"))
+
+        @asyncwrap
+        def async_unpack_subtitles():
+            shutil.unpack_archive(
+                os.path.join(video_dir, "subtitles.zip"), subtitle_dir
+            )
+            os.remove(os.path.join(video_dir, "subtitles.zip"))
+
+        await async_unpack_subtitles()
+
+    out_thumbnail = os.path.join(video_dir, "thumbnail.jpg")
+    if thumbnail:
+        log.info(f"Thumbnail: {thumbnail.filename}")
+        thumbnail_name_ext = os.path.splitext(thumbnail.filename)
+        if len(thumbnail_name_ext) != 2:
+            return PlainTextResponse(
+                content=f"Invalid file extension for {thumbnail}", status_code=415
+            )
+        thumbnail_ext = thumbnail_name_ext[1].lower()
+        if thumbnail_ext != ".jpg":
+            return PlainTextResponse(
+                status_code=415,
+                content=f"Invalid thumbnail type, must be .jpg, instead it was {thumbnail_ext}",
+            )
+        await async_download(thumbnail, out_thumbnail)
+        thumbnail_width, thumbnail_height = await async_get_image_size(out_thumbnail)
+        if thumbnail_width > 1280 or thumbnail_height > 720:
+            return PlainTextResponse(
+                status_code=415,
+                content=(
+                    f"Invalid thumbnail size, can't be larger than 1280x720, instead it was "
+                    f"{thumbnail_width}x{thumbnail_height}"
+                ),
+            )
+    else:
+        try:
+            await make_thumbnail(vidpath=final_path, out_thumbnail=out_thumbnail)
+        except ValueError as exc:
+            return PlainTextResponse(
+                status_code=415,
+                content=f"Error making thumbnail: {exc}",
+            )
+
+    relpath = os.path.relpath(final_path, WWW_ROOT)
+    url = path_to_url(os.path.dirname(relpath))
+    vid_id = Video.create(
+        title=title, url=url, description=description, path=final_path, iframe=url
+    ).id
+    native_size = await async_get_video_height(final_path)
+    vidfiles: list[str] = []
+    vidfiles.append(final_path)
+    if do_encode:
+        base_path = os.path.dirname(final_path)
+        for height in HEIGHTS:
+            if native_size != height and height < native_size:
+                outpath = os.path.join(base_path, f"{height}.mp4")
+                vidfiles.append(outpath)
+                await async_encode(
+                    videopath=final_path,
+                    crf=ENCODING_CRF,
+                    height=height,
+                    outpath=outpath,
+                )
+
+    await async_create_metadata_files(
+        vid_id=vid_id,
+        vid_title=title,
+        vidfiles=vidfiles,
+        domain_name=DOMAIN_NAME,
+        tracker_announce_list=TRACKER_ANNOUNCE_LIST,
+        stun_servers=STUN_SERVERS,
+        out_dir=video_dir,
+        chunk_factor=WEBTORRENT_CHUNK_FACTOR,
     )
+    cleanup.cancel()
+    return PlainTextResponse(f"Created video at {get_video_url(url)}")
 
 
 @app.post("/upload_url")
 def upload_url(request: Request, url: str) -> PlainTextResponse:
     """Uploads a file to the server."""
-    import tempfile
-
     if not is_authorized(request):
         return PlainTextResponse("error: Not Authorized", status_code=401)
     # Create temporary directory
     with tempfile.TemporaryDirectory() as tmpdirname:
         cmd = f"yt-dlp {url} -J"
-        log.info("Running command:\n  ", cmd)
+        log.info(f"Running command:\n  {cmd}")
         stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
         info = json.loads(stdout)
         formats = info.get("formats")
@@ -313,21 +442,21 @@ def upload_url(request: Request, url: str) -> PlainTextResponse:
             return PlainTextResponse(
                 "Can't download video - DRM protected", status_code=406
             )
-        # Gather the video's
-        vidinfos = []
-        for format in formats:
-            if "mp4" in format.get("ext", ""):
-                key = int(format.get("height", 0))
-                id = format.get("format_id")
-                vidinfos.append((key, id))
+        # Gather the mp4 format videos
+        vidinfos: list[Tuple[int, str | None]] = []
+        for fmts in formats:
+            if "mp4" in fmts.get("ext", ""):
+                key = int(fmts.get("height", 0))
+                tmp_id: str | None = fmts.get("format_id")
+                vidinfos.append((key, tmp_id))
         # sort so that the largest is first
         vidinfos.sort(key=lambda x: x[0])
-        sizemap = {
-            1080: None,
-            720: None,
-            480: None,
-        }
-        for key in sizemap:
+        sizemap: dict[int, str | None] = {key: None for key in HEIGHTS}
+        # Match the resolutions to the videos, rounding up when
+        # necessary.
+        sorted_heights = list(HEIGHTS)
+        sorted_heights.sort(reverse=True)
+        for key in sorted_heights:
             for i, resolution in enumerate(vidinfos):
                 if resolution[0] >= key:
                     sizemap[key] = vidinfos[i][1]
@@ -336,19 +465,25 @@ def upload_url(request: Request, url: str) -> PlainTextResponse:
             return PlainTextResponse(
                 "Can't download video - No suitable formats found", status_code=501
             )
+        # Download videos and store their paths in the downloaded_files.
         downloaded_files: list[str] = []
-        for resolution, id in sizemap.items():
-            if id:
+        for resolution in sizemap.keys():  # type: ignore
+            id = sizemap[resolution]  # type: ignore
+            if id is not None:
                 filename = os.path.join(tmpdirname, f"{resolution}.mp4")
                 cmd = f'yt-dlp {url} -f "{id}" -o "{filename}"'
-                log.info("Running command:\n  ", cmd)
+                log.info(f"Running command:\n  {cmd}")
                 stdout = subprocess.check_output(
                     cmd, shell=True, universal_newlines=True
                 )
                 log.info(stdout)
                 downloaded_files.append(filename)
                 log.info(f"Downloaded {filename}")
-        log.info("Done downloading", url)
+        log.info(f"Done downloading: {url}")
+    video_dir = to_video_dir(title)
+    os.makedirs(video_dir)
+    subtitle_dir = os.path.join(video_dir, "subtitles")  # noqa: F841  # pylint: disable=unused-variable
+    final_path = os.path.join(video_dir, "vid.mp4")  # noqa: F841  # pylint: disable=unused-variable
     return PlainTextResponse("error: Not Implemented", status_code=501)
 
 
@@ -399,9 +534,9 @@ if IS_TEST:
     @app.get("/log")
     async def log_file():
         """Returns the log file."""
-        logfile = open(
+        logfile = open(  # pylint: disable=consider-using-with
             LOGFILE, encoding="utf-8", mode="r"
-        )  # pylint: disable=consider-using-with
+        )
         return StreamingResponse(logfile, media_type="text/plain")
 
 
