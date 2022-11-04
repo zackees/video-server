@@ -102,6 +102,7 @@ def async_encode(videopath: str, crf: int, height: int, outpath: str) -> None:
 def get_video_height(vidfile: str) -> int:
     """Gets the video height from the video file."""
     # use ffprobe to get the height of the video
+    assert os.path.exists(vidfile)
     cmd = f'static_ffprobe "{vidfile}" -show_streams 2>&1'
     stdout = subprocess.check_output(cmd, shell=True)
     lines = stdout.decode().splitlines()
@@ -141,6 +142,7 @@ def mktorrent(
 
 def query_duration(vidfile: str) -> float:
     """Queries the duration of a video."""
+    assert os.path.exists(vidfile)
     cmd = f'static_ffprobe "{vidfile}" -show_format 2>&1'
     stdout = subprocess.check_output(cmd, shell=True)
     lines = stdout.decode().splitlines()

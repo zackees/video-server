@@ -45,7 +45,7 @@ from video_server.db import (
     can_login,
     add_bad_login,
 )
-from video_server.generate_files import init_static_files, async_create_metadata_files
+from video_server.generate_files import init_static_files, create_metadata_files, async_create_metadata_files
 from video_server.log import log
 from video_server.models import Video
 from video_server.rss import rss
@@ -396,7 +396,6 @@ async def upload(  # pylint: disable=too-many-branches,too-many-arguments,too-ma
                     height=height,
                     outpath=outpath,
                 )
-
     await async_create_metadata_files(
         vid_id=vid_id,
         vid_title=title,
@@ -412,88 +411,102 @@ async def upload(  # pylint: disable=too-many-branches,too-many-arguments,too-ma
 
 
 @app.post("/upload_url")
-def upload_url(request: Request, url: str) -> PlainTextResponse:
+def upload_url(request: Request, url: str) -> PlainTextResponse:  # pylint: disable=too-many-statements
     """Uploads a file to the server."""
     if not is_authorized(request):
         return PlainTextResponse("error: Not Authorized", status_code=401)
-    # Create temporary directory
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        cmd = f"yt-dlp {url} -J"
-        log.info(f"Running command:\n  {cmd}")
-        stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
-        info = json.loads(stdout)
-        formats = info.get("formats")
-        title = info.get("title")
-        thumbnail = info.get("thumbnail")
-        has_drm = info.get("__has_drm")
-        if not formats:
-            return PlainTextResponse(
-                "Can't download video - No formats found", status_code=406
-            )
-        if not title:
-            return PlainTextResponse(
-                "Can't download video - No title found", status_code=406
-            )
-        if not thumbnail:
-            return PlainTextResponse(
-                "Can't download video - No thumbnail found", status_code=406
-            )
-        if has_drm:
-            return PlainTextResponse(
-                "Can't download video - DRM protected", status_code=406
-            )
-        # Gather the mp4 format videos
-        vidinfos: list[Tuple[int, str | None]] = []
-        for fmts in formats:
-            if "mp4" in fmts.get("ext", ""):
-                key = int(fmts.get("height", 0))
-                tmp_id: str | None = fmts.get("format_id")
-                vidinfos.append((key, tmp_id))
-        # sort so that the largest is first
-        vidinfos.sort(key=lambda x: x[0])
-        sizemap: dict[int, str | None] = {key: None for key in HEIGHTS}
-        # Match the resolutions to the videos, rounding up when
-        # necessary.
-        sorted_heights = list(HEIGHTS)
-        sorted_heights.sort(reverse=True)
-        for key in sorted_heights:
-            for i, resolution in enumerate(vidinfos):
-                if resolution[0] >= key:
-                    vid_data = vidinfos[i][1]
-                    if vid_data in sizemap.values():
-                        continue
-                    sizemap[key] = vid_data
-                    break
-        if not [x for x in sizemap.values() if x]:
-            return PlainTextResponse(
-                "Can't download video - No suitable formats found", status_code=501
-            )
-        # Download videos and store their paths in the downloaded_files.
-        downloaded_files: list[str] = []
-        for resolution in sizemap.keys():  # type: ignore
-            id = sizemap[resolution]  # type: ignore
-            if id is not None:
-                filename = os.path.join(tmpdirname, f"{resolution}.mp4")
-                cmd = f'yt-dlp --no-check-certificate {url} -f "{id}" -o "{filename}"'
-                log.info(f"Running command:\n  {cmd}")
-                stdout = subprocess.check_output(
-                    cmd, shell=True, universal_newlines=True
-                )
-                log.info(stdout)
-                downloaded_files.append(filename)
-                log.info(f"Downloaded {filename}")
-        log.info(f"Done downloading: {url}")
+    cmd = f"yt-dlp {url} -J"
+    log.info(f"Running command:\n  {cmd}")
+    stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+    info = json.loads(stdout)
+    formats = info.get("formats")
+    title = info.get("title")
+    thumbnail = info.get("thumbnail")
+    has_drm = info.get("__has_drm")
+    if not formats:
+        return PlainTextResponse(
+            "Can't download video - No formats found", status_code=406
+        )
+    if not title:
+        return PlainTextResponse(
+            "Can't download video - No title found", status_code=406
+        )
+    if not thumbnail:
+        return PlainTextResponse(
+            "Can't download video - No thumbnail found", status_code=406
+        )
+    if has_drm:
+        return PlainTextResponse(
+            "Can't download video - DRM protected", status_code=406
+        )
     video_dir = to_video_dir(title)
     try:
         os.makedirs(video_dir)
+        cleanup = Cleanup(cleanup_fcn=lambda: shutil.rmtree(video_dir))
     except FileExistsError:
         return PlainTextResponse(
             f"error: Video with title '{title}' already exists", status_code=409
         )
-    cleanup = Cleanup(cleanup_fcn=lambda: shutil.rmtree(video_dir))  # noqa: F841  # pylint: disable=unused-variable
+    # Gather the mp4 format videos
+    vidinfos: list[Tuple[int, str | None]] = []
+    for fmts in formats:
+        if "mp4" in fmts.get("ext", ""):
+            key = int(fmts.get("height", 0))
+            tmp_id: str | None = fmts.get("format_id")
+            vidinfos.append((key, tmp_id))
+    # sort so that the largest is first
+    vidinfos.sort(key=lambda x: x[0])
+    sizemap: dict[int, str | None] = {key: None for key in HEIGHTS}
+    # Match the resolutions to the videos, rounding up when
+    # necessary.
+    sorted_heights = list(HEIGHTS)
+    sorted_heights.sort(reverse=True)
+    for key in sorted_heights:
+        for i, resolution in enumerate(vidinfos):
+            if resolution[0] >= key:
+                vid_data = vidinfos[i][1]
+                if vid_data in sizemap.values():
+                    continue
+                sizemap[key] = vid_data
+                break
+    if not [x for x in sizemap.values() if x]:
+        return PlainTextResponse(
+            "Can't download video - No suitable formats found", status_code=501
+        )
+    # Download videos and store their paths in the downloaded_files.
+    downloaded_files: list[str] = []
+    for resolution in sizemap.keys():  # type: ignore
+        id = sizemap[resolution]  # type: ignore
+        if id is not None:
+            filename = os.path.join(video_dir, f"{resolution}.mp4")
+            cmd = f'yt-dlp --no-check-certificate {url} -f "{id}" -o "{filename}"'
+            log.info(f"Running command:\n  {cmd}")
+            stdout = subprocess.check_output(
+                cmd, shell=True, universal_newlines=True
+            )
+            log.info(stdout)
+            downloaded_files.append(filename)
+            log.info(f"Downloaded {filename}")
+    log.info(f"Done downloading: {url}")
     subtitle_dir = os.path.join(video_dir, "subtitles")  # noqa: F841  # pylint: disable=unused-variable
     final_path = os.path.join(video_dir, "vid.mp4")  # noqa: F841  # pylint: disable=unused-variable
-    return PlainTextResponse("error: Not Implemented", status_code=501)
+    relpath = os.path.relpath(final_path, WWW_ROOT)
+    url = path_to_url(os.path.dirname(relpath))
+    vid_id = Video.create(
+        title=title, url=url, description="TODO - Add description", path=final_path, iframe=url
+    ).id
+    create_metadata_files(
+        vid_id=vid_id,
+        vid_title=title,
+        vidfiles=downloaded_files,
+        domain_name=DOMAIN_NAME,
+        tracker_announce_list=TRACKER_ANNOUNCE_LIST,
+        stun_servers=STUN_SERVERS,
+        out_dir=video_dir,
+        chunk_factor=WEBTORRENT_CHUNK_FACTOR,
+    )
+    cleanup.cancel()
+    return PlainTextResponse(f"Created video at {get_video_url(url)}")
 
 
 @app.delete("/delete")
