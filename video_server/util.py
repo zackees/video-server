@@ -39,6 +39,17 @@ async def async_download(src: UploadFile, dst: str) -> None:
     await src.close()
     return None
 
+import requests
+
+def download_file(url: str, outfile: str) -> None:
+    r = requests.get(url)
+    f = open(outfile, 'wb')
+    for chunk in r.iter_content(chunk_size=512 * 1024): 
+        if chunk: # filter out keep-alive new chunks
+            f.write(chunk)
+    f.close()
+    return 
+
 
 async def make_thumbnail(vidpath: str, out_thumbnail: str) -> None:
     """Makes a thumbnail from the first frame of the video."""

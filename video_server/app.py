@@ -81,6 +81,7 @@ from video_server.util import (
     async_encode,
     async_get_video_height,
     Cleanup,
+    download_file
 )
 from video_server.version import VERSION
 
@@ -492,9 +493,12 @@ def upload_url(request: Request, url: str) -> PlainTextResponse:  # pylint: disa
             log.info(f"Downloaded {filename}")
     log.info(f"Done downloading: {url}")
     subtitle_dir = os.path.join(video_dir, "subtitles")  # noqa: F841  # pylint: disable=unused-variable
-    final_path = os.path.join(video_dir, "vid.mp4")  # noqa: F841  # pylint: disable=unused-variable
+    final_path = os.path.join(video_dir, "vid.mp4")
     relpath = os.path.relpath(final_path, WWW_ROOT)
     url = path_to_url(os.path.dirname(relpath))
+    thumbnail_path = os.path.join(video_dir, "thumbnail.jpg")
+    download_file(thumbnail, thumbnail_path)
+    
     vid_id = Video.create(
         title=title, url=url, description="TODO - Add description", path=final_path, iframe=url
     ).id
