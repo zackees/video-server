@@ -83,10 +83,11 @@ def create_metadata_files(
     for vidfile in vidfiles:
         # height = get_video_height(vidfile)
         basename = os.path.splitext(os.path.basename(vidfile))[0]
+        pardir = os.path.dirname(vidfile)
         task = executor.submit(
             mktorrent_task,
             vidfile=vidfile,
-            torrent_path=f"{basename}.torrent",
+            torrent_path=os.path.join(pardir, f"{basename}.torrent"),
             tracker_announce_list=tracker_announce_list,
             chunk_factor=chunk_factor,
             webseed=f"{base_video_path}/{basename}.mp4",

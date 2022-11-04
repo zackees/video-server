@@ -137,6 +137,7 @@ def mktorrent(
     if os.name == "nt":
         log.error("mktorrent not supported on windows")
         return
+    log.info("Creating torrent for %s", os.path.abspath(vidfile))
     if os.path.exists(torrent_path):
         os.remove(torrent_path)
     # Use which to detect whether the mktorrent binary is available.
@@ -147,6 +148,7 @@ def mktorrent(
     log.info("Running\n    %s", cmd)
     # subprocess.check_output(cmd, shell=True)
     os.system(cmd)
+    log.info("Created torrent: %s", os.path.abspath(torrent_path))
     assert os.path.exists(torrent_path), f"Missing expected {torrent_path}"
 
 
