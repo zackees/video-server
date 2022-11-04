@@ -471,7 +471,7 @@ def upload_url(request: Request, url: str) -> PlainTextResponse:
             id = sizemap[resolution]  # type: ignore
             if id is not None:
                 filename = os.path.join(tmpdirname, f"{resolution}.mp4")
-                cmd = f'yt-dlp {url} -f "{id}" -o "{filename}"'
+                cmd = f'yt-dlp --no-check-certificate {url} -f "{id}" -o "{filename}"'
                 log.info(f"Running command:\n  {cmd}")
                 stdout = subprocess.check_output(
                     cmd, shell=True, universal_newlines=True
