@@ -503,7 +503,7 @@ def upload_url(  # pylint: disable=too-many-statements
     vid_id = Video.create(
         title=title,
         url=url,
-        description="TODO - Add description",
+        description="TODO - Implement description scraping",
         path=final_path,
         iframe=url,
     ).id
