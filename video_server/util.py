@@ -64,7 +64,6 @@ async def make_thumbnail(vidpath: str, out_thumbnail: str) -> None:
         "3",
         out_thumbnail,
     ]
-    # os.system('ffmpeg -i inputfile.mkv -vf "select=eq(n\,0)" -q:v 3 output_image.jpg')
     log.info("Creating thumbnail with cmd:\n  %s", cmd)
     proc = await asyncio.create_subprocess_exec(
         *cmd,

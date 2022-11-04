@@ -27,11 +27,10 @@ from fastapi.responses import (
     Response,
     StreamingResponse,
 )
-
-
 from fastapi.security import HTTPBasic
 from fastapi.staticfiles import StaticFiles
 from filelock import FileLock, Timeout
+from PIL import Image  # type: ignore
 from httpx import AsyncClient
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 from starlette.background import BackgroundTask
@@ -498,8 +497,19 @@ def upload_url(  # pylint: disable=too-many-statements
     final_path = os.path.join(video_dir, "vid.mp4")
     relpath = os.path.relpath(final_path, WWW_ROOT)
     url = path_to_url(os.path.dirname(relpath))
-    thumbnail_path = os.path.join(video_dir, "thumbnail.jpg")
-    download_file(thumbnail, thumbnail_path)
+    thumbnail_ext = os.path.splitext(thumbnail)[1]
+    with TemporaryDirectory() as tmpdir:
+        tmpfile = os.path.join(tmpdir, f"thumbnail{thumbnail_ext}")
+        download_file(thumbnail, tmpfile)
+        if thumbnail_ext != ".jpg":
+            # convert to jpg
+            img = Image.open(tmpfile)
+            img.save(os.path.join(tmpdir, "thumbnail.jpg"), "JPEG")
+            shutil.copy(
+                os.path.join(tmpdir, "thumbnail.jpg"),
+                os.path.join(video_dir, "thumbnail.jpg"))
+        else:
+            shutil.copy(tmpfile, os.path.join(video_dir, "thumbnail.jpg"))
     vid_id = Video.create(
         title=title,
         url=url,

@@ -30,7 +30,7 @@ from video_server.settings import (
     NUMBER_OF_ENCODING_THREADS,
     WEBTORRENT_ENABLED,
 )
-from video_server.util import get_video_height, mktorrent_task
+from video_server.util import mktorrent_task
 from video_server.log import log
 
 # WORK IN PROGRESS
@@ -74,7 +74,6 @@ def create_metadata_files(
     """Generates the webtorrent files for a given video file."""
     assert tracker_announce_list
     os.makedirs(out_dir, exist_ok=True)
-    # original_video_height = get_video_height(vidfile)
     html_path = os.path.join(out_dir, "index.html")
     http_type = "http" if "localhost" in domain_name else "https"
     vidname = sanitize_path(vid_title)
@@ -82,16 +81,16 @@ def create_metadata_files(
     tasks = []
     # for height in ENCODING_HEIGHTS:
     for vidfile in vidfiles:
-        height = get_video_height(vidfile)
-        basename = os.path.join(out_dir, f"{height}")
+        # height = get_video_height(vidfile)
+        basename = os.path.splitext(os.path.basename(vidfile))[0]
         task = executor.submit(
             mktorrent_task,
             vidfile=vidfile,
             torrent_path=f"{basename}.torrent",
             tracker_announce_list=tracker_announce_list,
             chunk_factor=chunk_factor,
-            webseed=f"{base_video_path}/{height}.mp4",
-            torrent_url=f"{base_video_path}/{height}.torrent",
+            webseed=f"{base_video_path}/{basename}.mp4",
+            torrent_url=f"{base_video_path}/{basename}.torrent",
         )
         tasks.append(task)
     completed_vids: list[dict] = [task.result() for task in tasks]
