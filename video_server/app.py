@@ -459,7 +459,10 @@ def upload_url(request: Request, url: str) -> PlainTextResponse:
         for key in sorted_heights:
             for i, resolution in enumerate(vidinfos):
                 if resolution[0] >= key:
-                    sizemap[key] = vidinfos[i][1]
+                    vid_data = vidinfos[i][1]
+                    if vid_data in sizemap.values():
+                        continue
+                    sizemap[key] = vid_data
                     break
         if not [x for x in sizemap.values() if x]:
             return PlainTextResponse(
@@ -482,6 +485,7 @@ def upload_url(request: Request, url: str) -> PlainTextResponse:
         log.info(f"Done downloading: {url}")
     video_dir = to_video_dir(title)
     os.makedirs(video_dir)
+    cleanup = Cleanup(cleanup_fcn=lambda: shutil.rmtree(video_dir))  # noqa: F841  # pylint: disable=unused-variable
     subtitle_dir = os.path.join(video_dir, "subtitles")  # noqa: F841  # pylint: disable=unused-variable
     final_path = os.path.join(video_dir, "vid.mp4")  # noqa: F841  # pylint: disable=unused-variable
     return PlainTextResponse("error: Not Implemented", status_code=501)
