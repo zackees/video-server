@@ -484,7 +484,12 @@ def upload_url(request: Request, url: str) -> PlainTextResponse:
                 log.info(f"Downloaded {filename}")
         log.info(f"Done downloading: {url}")
     video_dir = to_video_dir(title)
-    os.makedirs(video_dir)
+    try:
+        os.makedirs(video_dir)
+    except FileExistsError:
+        return PlainTextResponse(
+            f"error: Video with title '{title}' already exists", status_code=409
+        )
     cleanup = Cleanup(cleanup_fcn=lambda: shutil.rmtree(video_dir))  # noqa: F841  # pylint: disable=unused-variable
     subtitle_dir = os.path.join(video_dir, "subtitles")  # noqa: F841  # pylint: disable=unused-variable
     final_path = os.path.join(video_dir, "vid.mp4")  # noqa: F841  # pylint: disable=unused-variable
