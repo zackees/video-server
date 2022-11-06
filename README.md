@@ -12,10 +12,4 @@
     * DOMAIN_NAME - set this to the url without the http:// part
 
 
-This open source video server uses blockchain technology to turn your viewers into decentralized rebroadcasters. Allows high quality streams at a fraction of the cost.
-
-# TODO:
-  * Redis server:
-    * https://www.justinsilver.com/technology/node-js-pm2-nginx-redis-centos-7/
-    * https://www.hostinger.com/tutorials/how-to-install-and-setup-redis-on-ubuntu/
-    * https://github.com/redis/redis-py
+This open source video server uses WebTorrent to turn your viewers into decentralized rebroadcasters. Fallback players for clients that can't support webtorrent.
