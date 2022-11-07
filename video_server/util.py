@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import urllib.parse
 from tempfile import TemporaryDirectory
-from typing import Tuple
+from typing import Tuple, Callable
 
 import requests  # type: ignore
 from PIL import Image  # type: ignore
@@ -220,7 +220,7 @@ def add_audio(
 class Cleanup:
     """Cancellable cleanup function"""
 
-    def __init__(self, cleanup_fcn) -> None:
+    def __init__(self, cleanup_fcn: Callable) -> None:
         self.cleanup = True
         self.cleanup_fcn = cleanup_fcn
 
