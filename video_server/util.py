@@ -189,6 +189,16 @@ def mktorrent_task(  # pylint: disable=too-many-arguments
     )
 
 
+def has_audio(vidfile: str) -> bool:
+    """Checks if a video file has audio."""
+    cmd = (
+        "ffprobe -v error -select_streams a:0 -show_entries"
+        f" stream=codec_type -of default=noprint_wrappers=1:nokey=1 {vidfile}"
+    )
+    stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+    return stdout.strip() == "audio"
+
+
 class Cleanup:
     """Cancellable cleanup function"""
 

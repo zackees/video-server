@@ -73,14 +73,15 @@ from video_server.settings import (  # STUN_SERVERS,; TRACKER_ANNOUNCE_LIST,
 )
 
 from video_server.util import (
-    get_video_url,
     async_download,
-    make_thumbnail,
-    async_get_image_size,
     async_encode,
+    async_get_image_size,
     async_get_video_height,
-    Cleanup,
     download_file,
+    get_video_url,
+    has_audio,
+    make_thumbnail,
+    Cleanup
 )
 from video_server.version import VERSION
 
@@ -411,16 +412,6 @@ async def upload(  # pylint: disable=too-many-branches,too-many-arguments,too-ma
     )
     cleanup.cancel()
     return PlainTextResponse(f"Created video at {get_video_url(url)}")
-
-
-def has_audio(vidfile: str) -> bool:
-    """Checks if a video file has audio."""
-    cmd = (
-        "ffprobe -v error -select_streams a:0 -show_entries"
-        f" stream=codec_type -of default=noprint_wrappers=1:nokey=1 {vidfile}"
-    )
-    stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
-    return stdout.strip() == "audio"
 
 
 @app.post("/upload_url")
