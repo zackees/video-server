@@ -413,6 +413,16 @@ async def upload(  # pylint: disable=too-many-branches,too-many-arguments,too-ma
     return PlainTextResponse(f"Created video at {get_video_url(url)}")
 
 
+def has_audio(vidfile: str) -> bool:
+    """Checks if a video file has audio."""
+    cmd = (
+        "ffprobe -v error -select_streams a:0 -show_entries"
+        f" stream=codec_type -of default=noprint_wrappers=1:nokey=1 {vidfile}"
+    )
+    stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+    return stdout.strip() == "audio"
+
+
 @app.post("/upload_url")
 def upload_url(  # pylint: disable=too-many-statements
     request: Request, url: str
@@ -464,7 +474,7 @@ def upload_url(  # pylint: disable=too-many-statements
         elif "m4a" in ext:
             m4a_key: str = str(fmts.get("abr", 0))
             m4a_tmp_id: str | None = fmts.get("format_id")
-            if key and tmp_id:
+            if m4a_key and m4a_tmp_id:
                 item: Tuple[str, str] = (m4a_key, m4a_tmp_id)  # type: ignore
                 audiotracks.append(item)
     # sort so that the largest is first
@@ -498,6 +508,13 @@ def upload_url(  # pylint: disable=too-many-statements
             log.info(stdout)
             downloaded_files.append(filename)
             log.info(f"Downloaded {filename}")
+    all_videos_have_audio = True
+    for filename in downloaded_files:
+        if not has_audio(filename):
+            all_videos_have_audio = False
+            break
+    if not all_videos_have_audio:
+        log.warning("Some videos don't have audio.")
     log.info(f"Done downloading: {url}")
     subtitle_dir = os.path.join(  # noqa: F841  # pylint: disable=unused-variable
         video_dir, "subtitles"
