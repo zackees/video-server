@@ -49,6 +49,8 @@ def sanitize_path(path: str) -> str:
     )
     while len(out) > 4 and out[-1] == "_":
         out = out[:-1]
+    while len(out) > 4 and "__" in out:
+        out = out.replace("__", "_")
     return out
 
 
