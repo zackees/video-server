@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import urllib.parse
+from tempfile import TemporaryDirectory
 from typing import Tuple
 
 import requests  # type: ignore
@@ -192,11 +193,28 @@ def mktorrent_task(  # pylint: disable=too-many-arguments
 def has_audio(vidfile: str) -> bool:
     """Checks if a video file has audio."""
     cmd = (
-        "ffprobe -v error -select_streams a:0 -show_entries"
-        f" stream=codec_type -of default=noprint_wrappers=1:nokey=1 {vidfile}"
+        "ffprobe -v error -select_streams a:0 -show_entries stream=codec_type"
+        f' -of default=noprint_wrappers=1:nokey=1 "{vidfile}"'  # pylint: disable=line-too-long
     )
     stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
     return stdout.strip() == "audio"
+
+
+def add_audio(
+    audiopath: str, videopath: str
+) -> None:
+    """Adds audio to a video."""
+    log.info("Adding audio to %s", videopath)
+    with TemporaryDirectory() as temp_dir:
+        outpath = os.path.join(temp_dir, "out.mp4")
+        cmd = (
+            f'ffmpeg -y -i "{videopath}" -i "{audiopath}" -c:v copy -c:a aac'
+            f" -strict experimental -b:a 192k {outpath}"
+        )
+        log.info("Running command:\n  %s", cmd)
+        stdout = subprocess.check_output(cmd, shell=True)
+        log.info("Output:\n%s", stdout)
+        shutil.move(outpath, videopath)
 
 
 class Cleanup:

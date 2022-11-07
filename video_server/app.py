@@ -13,6 +13,7 @@ import time
 import traceback
 import subprocess
 import json
+from dataclasses import dataclass
 from tempfile import TemporaryDirectory
 from typing import Optional, Tuple
 
@@ -80,6 +81,7 @@ from video_server.util import (
     download_file,
     get_video_url,
     has_audio,
+    add_audio,
     make_thumbnail,
     Cleanup
 )
@@ -94,6 +96,13 @@ class RssResponse(Response):  # pylint: disable=too-few-public-methods
 
     media_type = "application/xml"
     charset = "utf-8"
+
+
+@dataclass
+class VidInfo:
+    """Video info to use while processing a video."""
+    filename: str
+    audio_exists: bool
 
 
 HTTP_SERVER = AsyncClient(base_url=f"http://localhost:{FILE_PORT}/")
@@ -488,7 +497,7 @@ def upload_url(  # pylint: disable=too-many-statements
             "Can't download video - No suitable formats found", status_code=501
         )
     # Download videos and store their paths in the downloaded_files.
-    downloaded_files: list[str] = []
+    downloaded_files: list[VidInfo] = []
     for resolution in sizemap.keys():  # type: ignore
         id = sizemap[resolution]  # type: ignore
         if id is not None:
@@ -496,16 +505,41 @@ def upload_url(  # pylint: disable=too-many-statements
             cmd = f'yt-dlp --no-check-certificate {url} -f "{id}" -o "{filename}"'
             log.info(f"Running command:\n  {cmd}")
             stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+            audio_exists = has_audio(filename)
             log.info(stdout)
-            downloaded_files.append(filename)
+            downloaded_files.append(VidInfo(filename=filename, audio_exists=audio_exists))
             log.info(f"Downloaded {filename}")
     all_videos_have_audio = True
-    for filename in downloaded_files:
-        if not has_audio(filename):
+    for vidinfo in downloaded_files:
+        if not vidinfo.audio_exists:
             all_videos_have_audio = False
             break
     if not all_videos_have_audio:
         log.warning("Some videos don't have audio.")
+        # Download audio tracks and store their paths in the downloaded_files.
+        if not audiotracks:
+            log.warning("No audio tracks found.")
+        else:
+            id = audiotracks[0][1]
+            with TemporaryDirectory() as tmpdir:
+                tmpfile = os.path.join(tmpdir, "audio.m4a")
+                cmd = f'yt-dlp --no-check-certificate {url} -f "{id}" -o "{tmpfile}"'
+                log.info(f"Running command:\n  {cmd}")
+                stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+                log.info(stdout)
+                log.info(f"Downloaded {filename}")
+                for vidinfo in downloaded_files:
+                    if not vidinfo.audio_exists:
+                        vidinfo.audio_exists = True
+                        add_audio(vidinfo.filename, tmpfile)
+            cmd = f'yt-dlp --no-check-certificate {url} -f "{id}" -o "{filename}"'
+            log.info(f"Running command:\n  {cmd}")
+            stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+            log.info(stdout)
+            for vidinfo in downloaded_files:
+                vidinfo.filename = filename
+            downloaded_files.append(VidInfo(filename, True))
+            log.info(f"Downloaded {filename}")
     log.info(f"Done downloading: {url}")
     subtitle_dir = os.path.join(  # noqa: F841  # pylint: disable=unused-variable
         video_dir, "subtitles"
@@ -533,10 +567,11 @@ def upload_url(  # pylint: disable=too-many-statements
         path=final_path,
         iframe=url,
     ).id
+    videofiles = [vidinfo.filename for vidinfo in downloaded_files]
     create_metadata_files(
         vid_id=vid_id,
         vid_title=title,
-        vidfiles=downloaded_files,
+        vidfiles=videofiles,
         domain_name=DOMAIN_NAME,
         tracker_announce_list=TRACKER_ANNOUNCE_LIST,
         stun_servers=STUN_SERVERS,
