@@ -454,7 +454,7 @@ def upload_url(  # pylint: disable=too-many-statements
         )
     # Gather the mp4 format videos
     vidinfos: list[Tuple[int, str | None]] = []
-    audiotracks: list[Tuple[int, str]] = []
+    audiotracks: list[Tuple[str, str]] = []
     for fmts in formats:
         ext = fmts.get("ext", "")
         if "mp4" in ext:
@@ -462,9 +462,11 @@ def upload_url(  # pylint: disable=too-many-statements
             tmp_id: str | None = fmts.get("format_id")
             vidinfos.append((key, tmp_id))
         elif "m4a" in ext:
-            key = int(fmts.get("abr", 0))
-            tmp_id = fmts.get("format_id")
-            audiotracks.append((key, tmp_id))
+            m4a_key: str = str(fmts.get("abr", 0))
+            m4a_tmp_id: str | None = fmts.get("format_id")
+            if key and tmp_id:
+                item: Tuple[str, str] = (m4a_key, m4a_tmp_id)  # type: ignore
+                audiotracks.append(item)
     # sort so that the largest is first
     vidinfos.sort(key=lambda x: x[0])
     sizemap: dict[int, str | None] = {key: None for key in HEIGHTS}
