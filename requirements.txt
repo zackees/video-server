@@ -3,7 +3,7 @@ uvicorn[standard]
 python-multipart
 keyvalue-sqlite==1.0.4
 multipart
-static-ffmpeg
+static-ffmpeg==2.3.0
 pathvalidate
 httpx
 filelock
