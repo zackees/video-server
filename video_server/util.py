@@ -169,8 +169,13 @@ def query_duration(vidfile: str) -> float:
 
 
 def mktorrent_task(  # pylint: disable=too-many-arguments
-    vidfile, torrent_path, tracker_announce_list, chunk_factor, webseed, torrent_url
-):
+    vidfile: str,
+    torrent_path: str,
+    tracker_announce_list: list[str],
+    chunk_factor: int,
+    webseed: str,
+    torrent_url: str
+) -> dict:
     """Creates a torrent file."""
     mktorrent(
         vidfile=vidfile,

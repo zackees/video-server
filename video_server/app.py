@@ -35,7 +35,7 @@ from PIL import Image  # type: ignore
 from httpx import AsyncClient
 from keyvalue_sqlite import KeyValueSqlite  # type: ignore
 from starlette.background import BackgroundTask
-
+import static_ffmpeg  # type: ignore
 from video_server.asyncwrap import asyncwrap
 from video_server.db import (
     db_list_all_files,
@@ -296,6 +296,8 @@ async def upload(  # pylint: disable=too-many-branches,too-many-arguments,too-ma
     """Uploads a file to the server."""
     if not is_authorized(request):
         return PlainTextResponse("error: Not Authorized", status_code=401)
+    log.info("Adding ffmpeg/ffprobe to path if it does not exist")
+    static_ffmpeg.add_paths()
     # TODO: Use stream files, large files exhaust the ram.
     # This can be fixed by applying the following fix:
     # https://github.com/tiangolo/fastapi/issues/58
@@ -430,6 +432,8 @@ def upload_url(  # pylint: disable=too-many-statements
     """Uploads a file to the server."""
     if not is_authorized(request):
         return PlainTextResponse("error: Not Authorized", status_code=401)
+    log.info("Adding ffmpeg/ffprobe to path if it does not exist")
+    static_ffmpeg.add_paths()
     cmd = f"yt-dlp {url} -J"
     log.info(f"Running command:\n  {cmd}")
     stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
