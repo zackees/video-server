@@ -224,7 +224,14 @@ def add_audio(
             f" -strict experimental -b:a 192k {outpath}"
         )
         log.info("Running command:\n  %s", cmd)
-        stdout = subprocess.check_output(cmd, shell=True)
+        try:
+            stdout = subprocess.check_output(cmd, shell=True)
+        except subprocess.CalledProcessError as cpe:
+            # print out stdout and stderr
+            log.fatal("Error running command: %s", cmd)
+            log.fatal("stdout: %s", cpe.stdout)
+            log.fatal("stderr: %s", cpe.stderr)
+            return
         log.info("Output:\n%s", stdout)
         shutil.move(outpath, videopath)
 
