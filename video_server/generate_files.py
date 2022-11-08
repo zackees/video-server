@@ -30,7 +30,7 @@ from video_server.settings import (
     NUMBER_OF_ENCODING_THREADS,
     WEBTORRENT_ENABLED,
 )
-from video_server.util import mktorrent_task, get_video_height
+from video_server.util import mktorrent_task, get_video_height, get_encoder, convert_to_h264
 from video_server.log import log
 
 # WORK IN PROGRESS
@@ -81,7 +81,15 @@ def create_metadata_files(
     tasks = []
     # for height in ENCODING_HEIGHTS:
     for vidfile in vidfiles:
-        # height = get_video_height(vidfile)
+        encoder_name = get_encoder(vidfile)
+        log.info("%s is encoded with %s", vidfile, encoder_name)
+        if encoder_name != "h264":
+            log.warning(
+                "Converting %s from %s to h264 to support webtorrent",
+                vidfile, encoder_name)
+            convert_to_h264(vidfile, fps=30)  # fps=30 is needed to make webtorrent work.
+            if get_encoder(vidfile) != "h264":
+                log.error("Failed to convert %s to h264", vidfile)
         basename = os.path.splitext(os.path.basename(vidfile))[0]
         pardir = os.path.dirname(vidfile)
         task = executor.submit(

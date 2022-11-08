@@ -13,7 +13,7 @@ import requests  # type: ignore
 from PIL import Image  # type: ignore
 
 from fastapi import UploadFile
-from video_server.settings import SERVER_PORT, ENCODER_PRESET
+from video_server.settings import SERVER_PORT, ENCODER_PRESET, ENCODING_CRF
 from video_server.log import log
 from video_server.asyncwrap import asyncwrap
 
@@ -234,6 +234,37 @@ def add_audio(
             return
         log.info("Output:\n%s", stdout)
         shutil.move(outpath, videopath)
+
+
+def get_encoder(vidfile: str) -> str:
+    """Returns the encoder used for the given video file."""
+    cmd = (
+        "ffprobe -v error -select_streams v:0 -show_entries stream=codec_name"
+        f" -of default=nokey=1:noprint_wrappers=1 {vidfile}"
+    )
+    return subprocess.check_output(cmd, shell=True, universal_newlines=True).strip()
+
+
+def convert_to_h264(vidfile: str, fps: int | None = None) -> None:
+    """Converts whatever the file is to h264"""
+    with TemporaryDirectory() as tmpdir:
+        outpath = os.path.join(tmpdir, "out.mp4")
+        fps_stmt = ""
+        if fps is not None:
+            fps_stmt = f"-r {fps}"
+        cmd = f'ffmpeg -y -i "{vidfile}" {fps_stmt} -c:v libx264 -crf {ENCODING_CRF} -movflags +faststart -bf 2 -preset {ENCODER_PRESET} {outpath}'
+        log.info("Running command:\n  %s", cmd)
+        try:
+            stdout = subprocess.check_output(cmd, shell=True)
+        except subprocess.CalledProcessError as cpe:
+            # print out stdout and stderr
+            log.fatal("Error running command: %s", cmd)
+            log.fatal("stdout: %s", cpe.stdout)
+            log.fatal("stderr: %s", cpe.stderr)
+            return
+        log.info("Output:\n%s", stdout)
+        os.remove(vidfile)
+        shutil.move(outpath, vidfile)
 
 
 class Cleanup:

@@ -584,6 +584,7 @@ def upload_url(  # pylint: disable=too-many-statements
                 os.path.join(video_dir, "thumbnail.jpg"))
         else:
             shutil.copy(tmpfile, os.path.join(video_dir, "thumbnail.jpg"))
+
     vid_id = Video.create(
         title=title,
         url=url,
