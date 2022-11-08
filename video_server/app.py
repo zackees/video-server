@@ -561,8 +561,9 @@ def upload_url(  # pylint: disable=too-many-statements
             stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
             log.info(stdout)
             for vidinfo in downloaded_files:
-                vidinfo.filename = filename
-            downloaded_files.append(VidInfo(filename, True))
+                if not vidinfo.audio_exists:
+                    vidinfo.audio_exists = True
+                    add_audio(vidinfo.filename, tmpfile)
             log.info(f"Downloaded {filename}")
     log.info(f"Done downloading: {url}")
     subtitle_dir = os.path.join(  # noqa: F841  # pylint: disable=unused-variable
