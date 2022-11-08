@@ -71,6 +71,7 @@ from video_server.settings import (  # STUN_SERVERS,; TRACKER_ANNOUNCE_LIST,
     WWW_ROOT,
     HEIGHTS,
     ENCODING_CRF,
+    NO_CLEANUP,
 )
 
 from video_server.util import (
@@ -332,6 +333,8 @@ async def upload(  # pylint: disable=too-many-branches,too-many-arguments,too-ma
         os.makedirs(video_dir)
         # pylint: disable-next=unused-variable
         cleanup = Cleanup(cleanup_fcn=lambda: shutil.rmtree(video_dir))
+        if NO_CLEANUP:
+            cleanup.cancel()
     except FileExistsError:
         return PlainTextResponse(
             content=f'Video with title "{title}" already exists', status_code=409
@@ -462,6 +465,8 @@ def upload_url(  # pylint: disable=too-many-statements
     try:
         os.makedirs(video_dir)
         cleanup = Cleanup(cleanup_fcn=lambda: shutil.rmtree(video_dir))
+        if NO_CLEANUP:
+            cleanup.cancel()
     except FileExistsError:
         return PlainTextResponse(
             f"error: Video with title '{title}' already exists", status_code=409
