@@ -8,6 +8,7 @@ import os
 os.environ.setdefault("DOMAIN_NAME", "localhost")
 os.environ.setdefault("IS_TEST", "1")
 os.environ.setdefault("DISABLE_AUTH", "1")
+os.environ.setdefault("PASSWORD", "1234")
 
 from video_server.app import main
 

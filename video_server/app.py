@@ -117,10 +117,9 @@ startup_lock = FileLock(STARTUP_LOCK)
 def app_description() -> str:
     """Return the description of the app."""
     lines: list[str] = []
-    lines.append("Video Server")
+    lines.append(f"  * IS_TEST: {IS_TEST}")
     if IS_TEST:
-        lines.append("  IS_TEST: True")
-        lines.append(f"  Password: {PASSWORD}")
+        lines.append(f"  * Password: {PASSWORD}")
     return "\n".join(lines)
 
 
@@ -639,6 +638,18 @@ async def delete(
     return PlainTextResponse(content="Deleted ok")
 
 
+@app.get("/log")
+async def log_file(request: Request):
+    """Returns the log file."""
+    # authorize
+    if not is_authorized(request):
+        return JSONResponse({"error": "Not Authorized"}, status_code=401)
+    logfile = open(  # pylint: disable=consider-using-with
+        LOGFILE, encoding="utf-8", mode="r"
+    )
+    return StreamingResponse(logfile, media_type="text/plain")
+
+
 if IS_TEST:
 
     @app.delete("/clear")
@@ -650,14 +661,6 @@ if IS_TEST:
         await asyncio.to_thread(lambda: shutil.rmtree(VIDEO_ROOT, ignore_errors=True))
         os.makedirs(VIDEO_ROOT, exist_ok=True)
         return PlainTextResponse(content="Clear ok")
-
-    @app.get("/log")
-    async def log_file():
-        """Returns the log file."""
-        logfile = open(  # pylint: disable=consider-using-with
-            LOGFILE, encoding="utf-8", mode="r"
-        )
-        return StreamingResponse(logfile, media_type="text/plain")
 
 
 async def _reverse_proxy(request: Request):
