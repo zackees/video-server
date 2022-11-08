@@ -130,8 +130,6 @@ def create_metadata_files(
         height: int = get_video_height(vid)
         if smallest_height is None or height < smallest_height:
             smallest_height = height
-    if smallest_height is None or smallest_height < 480:
-        disable_webtorrent = True  # workaround for webtorrent bug
     log.info(f"Subtitles: {subtitles}")
     video_json = {
         "title": vid_title,
@@ -143,7 +141,7 @@ def create_metadata_files(
         "subtitles": subtitles,
         "poster": f"{base_video_path}/thumbnail.jpg",
         "webtorrent": {
-            "enabled": WEBTORRENT_ENABLED and not disable_webtorrent,
+            "enabled": WEBTORRENT_ENABLED,
             "eager_webseed": True,
         },
     }
