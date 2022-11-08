@@ -554,7 +554,7 @@ def upload_url(  # pylint: disable=too-many-statements
                 for vidinfo in downloaded_files:
                     if not vidinfo.audio_exists:
                         vidinfo.audio_exists = True
-                        add_audio(vidinfo.filename, tmpfile)
+                        add_audio(audiopath=tmpfile, videopath=vidinfo.filename)
             cmd = f'yt-dlp --no-check-certificate {url} -f "{id}" -o "{filename}"'
             log.info(f"Running command:\n  {cmd}")
             stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
@@ -562,7 +562,7 @@ def upload_url(  # pylint: disable=too-many-statements
             for vidinfo in downloaded_files:
                 if not vidinfo.audio_exists:
                     vidinfo.audio_exists = True
-                    add_audio(vidinfo.filename, tmpfile)
+                    add_audio(audiopath=tmpfile, videopath=vidinfo.filename)
             log.info(f"Downloaded {filename}")
     log.info(f"Done downloading: {url}")
     subtitle_dir = os.path.join(  # noqa: F841  # pylint: disable=unused-variable
