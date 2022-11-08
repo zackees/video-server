@@ -198,7 +198,7 @@ def mktorrent_task(  # pylint: disable=too-many-arguments
 def has_audio(vidfile: str) -> bool:
     """Checks if a video file has audio."""
     cmd = (
-        "ffprobe -v error -select_streams a:0 -show_entries stream=codec_type"
+        "static_ffprobe -v error -select_streams a:0 -show_entries stream=codec_type"
         f' -of default=noprint_wrappers=1:nokey=1 "{vidfile}"'  # pylint: disable=line-too-long
     )
     try:
@@ -220,7 +220,7 @@ def add_audio(
     with TemporaryDirectory() as temp_dir:
         outpath = os.path.join(temp_dir, "out.mp4")
         cmd = (
-            f'ffmpeg -y -i "{videopath}" -i "{audiopath}" -c:v copy -c:a aac '
+            f'static_ffmpeg -y -i "{videopath}" -i "{audiopath}" -c:v copy -c:a aac '
             f" -strict experimental {outpath}"
         )
         log.info("Running command:\n  %s", cmd)
@@ -239,7 +239,7 @@ def add_audio(
 def get_encoder(vidfile: str) -> str:
     """Returns the encoder used for the given video file."""
     cmd = (
-        "ffprobe -v error -select_streams v:0 -show_entries stream=codec_name"
+        "static_ffprobe -v error -select_streams v:0 -show_entries stream=codec_name"
         f" -of default=nokey=1:noprint_wrappers=1 {vidfile}"
     )
     return subprocess.check_output(cmd, shell=True, universal_newlines=True).strip()
@@ -253,7 +253,7 @@ def convert_to_h264(vidfile: str, fps: int | None = None) -> None:
         if fps is not None:
             fps_stmt = f"-r {fps}"
         cmd = (
-            f'ffmpeg -y -i "{vidfile}" {fps_stmt} -c:v libx264'
+            f'static_ffmpeg -y -i "{vidfile}" {fps_stmt} -c:v libx264'
             f' -crf {ENCODING_CRF} -movflags +faststart -bf 2 -preset'
             f' {ENCODER_PRESET} {outpath}'
         )
