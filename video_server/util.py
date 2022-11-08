@@ -271,6 +271,15 @@ def convert_to_h264(vidfile: str, fps: int | None = None) -> None:
         shutil.move(outpath, vidfile)
 
 
+def ytdlp_download(url: str, id: str, outfile: str) -> None:  # pylint: disable=invalid-name,redefined-builtin
+    """Downloads a video using yt-dlp."""
+    cmd = f'yt-dlp --no-check-certificate {url} -f "{id}" -o "{outfile}"'
+    log.info("Running command:\n  %s", cmd)
+    stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+    log.info(stdout)
+    log.info("Downloaded %s", outfile)
+
+
 class Cleanup:
     """Cancellable cleanup function"""
 

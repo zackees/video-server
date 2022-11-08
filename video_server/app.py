@@ -83,6 +83,7 @@ from video_server.util import (
     has_audio,
     add_audio,
     make_thumbnail,
+    ytdlp_download,
     Cleanup
 )
 from video_server.version import VERSION
@@ -525,9 +526,7 @@ def upload_url(  # pylint: disable=too-many-statements
         id = sizemap[resolution]  # type: ignore
         if id is not None:
             filename = os.path.join(video_dir, f"{resolution}.mp4")
-            cmd = f'yt-dlp --no-check-certificate {url} -f "{id}" -o "{filename}"'
-            log.info(f"Running command:\n  {cmd}")
-            stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+            ytdlp_download(url, id, filename)
             audio_exists = has_audio(filename)
             log.info(stdout)
             downloaded_files.append(VidInfo(filename=filename, audio_exists=audio_exists))
@@ -546,19 +545,12 @@ def upload_url(  # pylint: disable=too-many-statements
             id = audiotracks[0][1]
             with TemporaryDirectory() as tmpdir:
                 tmpfile = os.path.join(tmpdir, "audio.m4a")
-                cmd = f'yt-dlp --no-check-certificate {url} -f "{id}" -o "{tmpfile}"'
-                log.info(f"Running command:\n  {cmd}")
-                stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
-                log.info(stdout)
-                log.info(f"Downloaded {filename}")
+                ytdlp_download(url, id, tmpfile)
                 for vidinfo in downloaded_files:
                     if not vidinfo.audio_exists:
                         vidinfo.audio_exists = True
                         add_audio(audiopath=tmpfile, videopath=vidinfo.filename)
-            cmd = f'yt-dlp --no-check-certificate {url} -f "{id}" -o "{filename}"'
-            log.info(f"Running command:\n  {cmd}")
-            stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
-            log.info(stdout)
+            ytdlp_download(url, id, tmpfile)
             for vidinfo in downloaded_files:
                 if not vidinfo.audio_exists:
                     vidinfo.audio_exists = True
