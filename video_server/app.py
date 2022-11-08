@@ -13,9 +13,10 @@ import time
 import traceback
 import subprocess
 import json
+import random
 from dataclasses import dataclass
 from tempfile import TemporaryDirectory
-from typing import Optional, Tuple
+from typing import Optional
 
 import uvicorn  # type: ignore
 import httpx
@@ -84,6 +85,7 @@ from video_server.util import (
     add_audio,
     make_thumbnail,
     ytdlp_download,
+    get_video_height,
     Cleanup
 )
 from video_server.version import VERSION
@@ -448,7 +450,6 @@ def upload_url(  # pylint: disable=too-many-statements
     """Uploads a file to the server."""
     if not is_authorized(request):
         return PlainTextResponse("error: Not Authorized", status_code=401)
-    log.info("Adding ffmpeg/ffprobe to path if it does not exist")
     cmd = f"yt-dlp {url} -J"
     log.info(f"Running command:\n  {cmd}")
     stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
@@ -484,23 +485,46 @@ def upload_url(  # pylint: disable=too-many-statements
             f"error: Video with title '{title}' already exists", status_code=409
         )
     # Gather the mp4 format videos
-    vidinfos: list[Tuple[int, str | None]] = []
-    audiotracks: list[Tuple[str, str]] = []
+    vidinfos: list[list] = []
+    audiotracks: list[list] = []
+    downloaded_videos: dict[int, str] = {}
     for fmts in formats:
         ext = fmts.get("ext", "")
         if "mp4" in ext:
-            height = fmts.get("height")
-            if height is None:
-                continue
-            key = height or 0
+            height = fmts.get("height")  # This key exists and maps to None on bitchute
+            key = height or -1
             tmp_id: str | None = fmts.get("format_id")
-            vidinfos.append((key, tmp_id))
+            vidinfos.append([key, tmp_id])
         elif "m4a" in ext:
             m4a_key: str = str(fmts.get("abr", 0))
             m4a_tmp_id: str | None = fmts.get("format_id")
             if m4a_key and m4a_tmp_id:
-                item: Tuple[str, str] = (m4a_key, m4a_tmp_id)  # type: ignore
+                item: list[str, str] = [m4a_key, m4a_tmp_id]  # type: ignore
                 audiotracks.append(item)
+    downloaded_files: list[VidInfo] = []
+    cleanup_files: list[str] = []
+
+    def cleanup_fcn() -> None:
+        for f in cleanup_files:
+            os.remove(f)
+
+    mandatory_cleanup = Cleanup(  # noqa: F841 # pylint: disable=unused-variable
+        cleanup_fcn=cleanup_fcn)
+    for i, (key, tmp_id) in enumerate(vidinfos):
+        if key == -1:
+            log.warning(
+                "No height found for video, downloading temporary video and querying height")
+            # make a random name for the video
+            tmp_video_file = os.path.join(video_dir, f"{random.randint(0, 10000000000)}.mp4")
+            # Fallback behavior downloads the best video and audio and merges them, if necessary.
+            cmd = f'yt-dlp -f "bv*[ext=mp4]+ba/b" {url} -o {tmp_video_file}'
+            log.info("Running command:\n  %s", cmd)
+            stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+            log.info("Command output:\n  %s", stdout)
+            cleanup_files.append(tmp_video_file)
+            height = get_video_height(tmp_video_file)
+            vidinfos[i][0] = height  # Replace the video info with the temp file.
+            downloaded_videos[height] = tmp_video_file
     # sort so that the largest is first
     vidinfos.sort(key=lambda x: x[0])
     sizemap: dict[int, str | None] = {key: None for key in HEIGHTS}
@@ -521,12 +545,15 @@ def upload_url(  # pylint: disable=too-many-statements
             "Can't download video - No suitable formats found", status_code=501
         )
     # Download videos and store their paths in the downloaded_files.
-    downloaded_files: list[VidInfo] = []
     for resolution in sizemap.keys():  # type: ignore
         id = sizemap[resolution]  # type: ignore
         if id is not None:
             filename = os.path.join(video_dir, f"{resolution}.mp4")
-            ytdlp_download(url, id, filename)
+            if resolution in downloaded_videos:
+                res: str = downloaded_videos[resolution]  # type: ignore
+                shutil.copy(res, filename)
+            else:
+                ytdlp_download(url, id, filename)
             audio_exists = has_audio(filename)
             log.info(stdout)
             downloaded_files.append(VidInfo(filename=filename, audio_exists=audio_exists))
@@ -545,12 +572,12 @@ def upload_url(  # pylint: disable=too-many-statements
             id = audiotracks[0][1]
             with TemporaryDirectory() as tmpdir:
                 tmpfile = os.path.join(tmpdir, "audio.m4a")
-                ytdlp_download(url, id, tmpfile)
+                ytdlp_download(url, id, tmpfile)  # type: ignore
                 for vidinfo in downloaded_files:
                     if not vidinfo.audio_exists:
                         vidinfo.audio_exists = True
                         add_audio(audiopath=tmpfile, videopath=vidinfo.filename)
-            ytdlp_download(url, id, tmpfile)
+            ytdlp_download(url, id, tmpfile)  # type: ignore
             for vidinfo in downloaded_files:
                 if not vidinfo.audio_exists:
                     vidinfo.audio_exists = True
