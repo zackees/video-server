@@ -252,7 +252,11 @@ def convert_to_h264(vidfile: str, fps: int | None = None) -> None:
         fps_stmt = ""
         if fps is not None:
             fps_stmt = f"-r {fps}"
-        cmd = f'ffmpeg -y -i "{vidfile}" {fps_stmt} -c:v libx264 -crf {ENCODING_CRF} -movflags +faststart -bf 2 -preset {ENCODER_PRESET} {outpath}'
+        cmd = (
+            f'ffmpeg -y -i "{vidfile}" {fps_stmt} -c:v libx264'
+            f' -crf {ENCODING_CRF} -movflags +faststart -bf 2 -preset'
+            f' {ENCODER_PRESET} {outpath}'
+        )
         log.info("Running command:\n  %s", cmd)
         try:
             stdout = subprocess.check_output(cmd, shell=True)
