@@ -14,3 +14,4 @@ services:
       - ENCODER_PRESET=ultrafast
       - ENCODING_HEIGHTS=1080
       - IS_TEST=1
+      - PASSWORD=1234
