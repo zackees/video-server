@@ -30,7 +30,7 @@ from video_server.settings import (
     NUMBER_OF_ENCODING_THREADS,
     WEBTORRENT_ENABLED,
 )
-from video_server.util import mktorrent_task, get_video_height, get_encoder, convert_to_h264
+from video_server.util import mktorrent_task, get_encoder, convert_to_h264
 from video_server.log import log
 
 # WORK IN PROGRESS
@@ -124,12 +124,6 @@ def create_metadata_files(
         }
         for file_vtt in vtt_files
     ]
-    disable_webtorrent = False
-    smallest_height: int | None = None
-    for vid in vidfiles:
-        height: int = get_video_height(vid)
-        if smallest_height is None or height < smallest_height:
-            smallest_height = height
     log.info(f"Subtitles: {subtitles}")
     video_json = {
         "title": vid_title,
@@ -143,6 +137,8 @@ def create_metadata_files(
         "webtorrent": {
             "enabled": WEBTORRENT_ENABLED,
             "eager_webseed": True,
+            "stun_servers": stun_servers,
+            "__comment": "TODO: pass stun_servers to webtorrent client"
         },
     }
     json_data = json.dumps(video_json, indent=4)
