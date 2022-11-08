@@ -220,8 +220,8 @@ def add_audio(
     with TemporaryDirectory() as temp_dir:
         outpath = os.path.join(temp_dir, "out.mp4")
         cmd = (
-            f'ffmpeg -y -i "{videopath}" -i "{audiopath}" -c:v copy -c:a'
-            f" -strict experimental -b:a 192k {outpath}"
+            f'ffmpeg -y -i "{videopath}" -i "{audiopath}" -c:v copy -c:a aac '
+            f" -strict experimental {outpath}"
         )
         log.info("Running command:\n  %s", cmd)
         try:
