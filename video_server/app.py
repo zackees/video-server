@@ -488,7 +488,10 @@ def upload_url(  # pylint: disable=too-many-statements
     for fmts in formats:
         ext = fmts.get("ext", "")
         if "mp4" in ext:
-            key = int(fmts.get("height", 0))
+            height = fmts.get("height")
+            if height is None:
+                continue
+            key = height or 0
             tmp_id: str | None = fmts.get("format_id")
             vidinfos.append((key, tmp_id))
         elif "m4a" in ext:
