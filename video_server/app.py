@@ -110,13 +110,28 @@ HTTP_SERVER = AsyncClient(base_url=f"http://localhost:{FILE_PORT}/")
 
 log.info("Starting fastapi webtorrent movie server")
 
-
 app_state = KeyValueSqlite(APP_DB, "app")
-# VIDEO_ROOT = os.path.join(DATA_ROOT, "v")
 startup_lock = FileLock(STARTUP_LOCK)
 
 
-app = FastAPI()
+def app_description() -> str:
+    """Return the description of the app."""
+    lines: list[str] = []
+    lines.append("Video Server")
+    if IS_TEST:
+        lines.append("  IS_TEST: True")
+        lines.append(f"  Password: {PASSWORD}")
+    return "\n".join(lines)
+
+
+app = FastAPI(
+    title="Video Server",
+    version=VERSION, redoc_url=None,
+    license_info={
+        "name": "Private program, do not distribute",
+    },
+    description=app_description()
+)
 
 security = HTTPBasic()
 
