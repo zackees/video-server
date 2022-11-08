@@ -201,7 +201,14 @@ def has_audio(vidfile: str) -> bool:
         "ffprobe -v error -select_streams a:0 -show_entries stream=codec_type"
         f' -of default=noprint_wrappers=1:nokey=1 "{vidfile}"'  # pylint: disable=line-too-long
     )
-    stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+    try:
+        stdout = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+    except subprocess.CalledProcessError as cpe:
+        # print out stdout and stderr
+        log.fatal("Error running command: %s", cmd)
+        log.fatal("stdout: %s", cpe.stdout)
+        log.fatal("stderr: %s", cpe.stderr)
+        return True  # suppresses audio processing by faking that there is audio
     return stdout.strip() == "audio"
 
 
