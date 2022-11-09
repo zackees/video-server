@@ -117,6 +117,7 @@
         .then(data => {
             jsonFetched = true;
             console.log(data)
+            document.title = data.title
             $imgPoster.src = data.poster
             if (jsonFetched && loaded) {
                 incrementVideoCount()
