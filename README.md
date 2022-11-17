@@ -15,4 +15,4 @@ An open source video server which uses WebTorrent to turn your viewers into dece
   * Environmental variables
     * PASSWORD - set to your password
     * DOMAIN_NAME - set this to the url without the http:// part
-
+    * WEBTORRENT_ENABLED - set to 0 to disable
