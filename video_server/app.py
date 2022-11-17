@@ -218,6 +218,7 @@ def login(password: str) -> PlainTextResponse:
         )
     try:
         if not digest_equals(password, PASSWORD):
+            log.info("password %s does not match %s", password, PASSWORD)
             add_bad_login()
             resp = PlainTextResponse("Bad login.")
             resp.delete_cookie(key="password")
