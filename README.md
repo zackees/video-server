@@ -17,3 +17,6 @@ An open source video server which uses WebTorrent to turn your viewers into dece
     * DATA_ROOT: /var/data
       * The persistant disk thats mounted into docker.
 
+It should look like this:
+![image](https://user-images.githubusercontent.com/6856673/202430544-5dfd89aa-2048-445f-9bc9-85c02e778462.png)
+
