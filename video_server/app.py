@@ -72,6 +72,7 @@ from video_server.settings import (  # STUN_SERVERS,; TRACKER_ANNOUNCE_LIST,
     HEIGHTS,
     ENCODING_CRF,
     NO_CLEANUP,
+    ENABLE_CLEAR,
 )
 
 from video_server.util import (
@@ -86,7 +87,7 @@ from video_server.util import (
     make_thumbnail,
     ytdlp_download,
     get_video_height,
-    Cleanup
+    Cleanup,
 )
 from video_server.version import VERSION
 
@@ -104,6 +105,7 @@ class RssResponse(Response):  # pylint: disable=too-few-public-methods
 @dataclass
 class VidInfo:
     """Video info to use while processing a video."""
+
     filename: str
     audio_exists: bool
 
@@ -127,11 +129,12 @@ def app_description() -> str:
 
 app = FastAPI(
     title="Video Server",
-    version=VERSION, redoc_url=None,
+    version=VERSION,
+    redoc_url=None,
     license_info={
         "name": "Private program, do not distribute",
     },
-    description=app_description()
+    description=app_description(),
 )
 
 security = HTTPBasic()
@@ -213,9 +216,7 @@ def login(password: str) -> PlainTextResponse:
     if DISABLE_AUTH:
         return PlainTextResponse("Login ok - auth disabled so any password is ok")
     if not can_login():
-        return PlainTextResponse(
-            "Too many failed login attempts. Please try again later."
-        )
+        return PlainTextResponse("Too many failed login attempts. Please try again later.")
     try:
         if not digest_equals(password, PASSWORD):
             log.info("password %s does not match %s", password, PASSWORD)
@@ -326,9 +327,7 @@ async def upload(  # pylint: disable=too-many-branches,too-many-arguments,too-ma
     # Check that the upload file is valid
     file_ext = os.path.splitext(file.filename)  # type: ignore
     if len(file_ext) != 2:
-        return PlainTextResponse(
-            content=f"Invalid file extension for {file}", status_code=415
-        )
+        return PlainTextResponse(content=f"Invalid file extension for {file}", status_code=415)
     ext = file_ext[1].lower()
     # Check if the file is a valid type
     if do_encode:
@@ -370,9 +369,7 @@ async def upload(  # pylint: disable=too-many-branches,too-many-arguments,too-ma
 
         @asyncwrap
         def async_unpack_subtitles():
-            shutil.unpack_archive(
-                os.path.join(video_dir, "subtitles.zip"), subtitle_dir
-            )
+            shutil.unpack_archive(os.path.join(video_dir, "subtitles.zip"), subtitle_dir)
             os.remove(os.path.join(video_dir, "subtitles.zip"))
 
         await async_unpack_subtitles()
@@ -460,21 +457,13 @@ def upload_url(  # pylint: disable=too-many-statements
     thumbnail = info.get("thumbnail")
     has_drm = info.get("__has_drm")
     if not formats:
-        return PlainTextResponse(
-            "Can't download video - No formats found", status_code=406
-        )
+        return PlainTextResponse("Can't download video - No formats found", status_code=406)
     if not title:
-        return PlainTextResponse(
-            "Can't download video - No title found", status_code=406
-        )
+        return PlainTextResponse("Can't download video - No title found", status_code=406)
     if not thumbnail:
-        return PlainTextResponse(
-            "Can't download video - No thumbnail found", status_code=406
-        )
+        return PlainTextResponse("Can't download video - No thumbnail found", status_code=406)
     if has_drm:
-        return PlainTextResponse(
-            "Can't download video - DRM protected", status_code=406
-        )
+        return PlainTextResponse("Can't download video - DRM protected", status_code=406)
     video_dir = to_video_dir(title)
     try:
         os.makedirs(video_dir)
@@ -510,11 +499,13 @@ def upload_url(  # pylint: disable=too-many-statements
             os.remove(f)
 
     mandatory_cleanup = Cleanup(  # noqa: F841 # pylint: disable=unused-variable
-        cleanup_fcn=cleanup_fcn)
+        cleanup_fcn=cleanup_fcn
+    )
     for i, (key, tmp_id) in enumerate(vidinfos):
         if key == -1:
             log.warning(
-                "No height found for video, downloading temporary video and querying height")
+                "No height found for video, downloading temporary video and querying height"
+            )
             # make a random name for the video
             tmp_video_file = os.path.join(video_dir, f"{random.randint(0, 10000000000)}.mp4")
             # Fallback behavior downloads the best video and audio and merges them, if necessary.
@@ -600,8 +591,8 @@ def upload_url(  # pylint: disable=too-many-statements
             img = Image.open(tmpfile)
             img.save(os.path.join(tmpdir, "thumbnail.jpg"), "JPEG")
             shutil.copy(
-                os.path.join(tmpdir, "thumbnail.jpg"),
-                os.path.join(video_dir, "thumbnail.jpg"))
+                os.path.join(tmpdir, "thumbnail.jpg"), os.path.join(video_dir, "thumbnail.jpg")
+            )
         else:
             shutil.copy(tmpfile, os.path.join(video_dir, "thumbnail.jpg"))
 
@@ -628,9 +619,7 @@ def upload_url(  # pylint: disable=too-many-statements
 
 
 @app.delete("/delete")
-async def delete(
-    password: str, title: str, background_tasks: BackgroundTasks
-) -> PlainTextResponse:
+async def delete(password: str, title: str, background_tasks: BackgroundTasks) -> PlainTextResponse:
     """Clears the stored magnet URI."""
     if not DISABLE_AUTH and not digest_equals(password, PASSWORD):
         return PlainTextResponse("error: Not Authorized", status_code=401)
@@ -665,13 +654,11 @@ async def log_file(request: Request):
     # authorize
     if not is_authorized(request):
         return JSONResponse({"error": "Not Authorized"}, status_code=401)
-    logfile = open(  # pylint: disable=consider-using-with
-        LOGFILE, encoding="utf-8", mode="r"
-    )
+    logfile = open(LOGFILE, encoding="utf-8", mode="r")  # pylint: disable=consider-using-with
     return StreamingResponse(logfile, media_type="text/plain")
 
 
-if IS_TEST:
+if ENABLE_CLEAR:
 
     @app.delete("/clear")
     async def clear(password: str) -> PlainTextResponse:
@@ -685,9 +672,7 @@ if IS_TEST:
 
 
 async def _reverse_proxy(request: Request):
-    url = httpx.URL(
-        path=request.url.path, port=FILE_PORT, query=request.url.query.encode("utf-8")
-    )
+    url = httpx.URL(path=request.url.path, port=FILE_PORT, query=request.url.query.encode("utf-8"))
     rp_req = HTTP_SERVER.build_request(
         request.method, url, headers=request.headers.raw, content=await request.body()
     )

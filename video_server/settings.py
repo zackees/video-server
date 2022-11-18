@@ -54,3 +54,4 @@ WEBTORRENT_CHUNK_FACTOR = int(os.environ.get("WEBTORRENT_CHUNK_FACTOR", "17"))
 FILE_PORT = int(os.environ.get("FILE_PORT", "7777"))
 SERVER_PORT = int(os.environ.get("SERVER_PORT", "8888"))
 HEIGHTS = [1080, 720, 480]
+ENABLE_CLEAR = IS_TEST or os.environ.get("ENABLE_CLEAR", "0") == "1"
