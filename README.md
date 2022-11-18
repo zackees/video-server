@@ -20,3 +20,7 @@ An open source video server which uses WebTorrent to turn your viewers into dece
 It should look like this:
 ![image](https://user-images.githubusercontent.com/6856673/202430544-5dfd89aa-2048-445f-9bc9-85c02e778462.png)
 
+With an external disk like this:
+
+![image](https://user-images.githubusercontent.com/6856673/202666533-71bcb5c0-cc84-4d18-8f04-1d13fa945130.png)
+
